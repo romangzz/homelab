@@ -8,4 +8,13 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 100Gi
+      # Matches the actual bound volume's live capacity -- it predates
+      # this repo (created 2026-06-25, before vLLM/Ollama was managed
+      # here at all) and local-path's StorageClass doesn't support
+      # resize, so declaring a larger size here just makes ArgoCD's
+      # selfHeal retry a resize patch forever without ever succeeding.
+      # Note: local-path doesn't actually enforce this as a hard quota
+      # (no filesystem-level limit), and actual usage already exceeds
+      # it (~86Gi of pulled models) -- this number is closer to a label
+      # than a real ceiling.
+      storage: 50Gi
