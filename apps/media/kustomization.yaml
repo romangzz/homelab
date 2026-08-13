@@ -22,4 +22,6 @@ resources:
   - unpackerr-secret.yaml
   - unpackerr.yaml
   - iso-extractor.yaml
+  - recyclarr-secret.yaml
+  - recyclarr-cronjob.yaml
 

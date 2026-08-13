@@ -1,0 +1,65 @@
+# Keeps Radarr/Sonarr custom formats and quality profiles in sync with
+# TRaSH Guides. Config references guide-backed quality profiles by
+# trash_id (not hand-typed custom format definitions) -- see
+# recyclarr-secret.yaml for which profiles.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: recyclarr
+  namespace: media
+spec:
+  schedule: "0 6 * * 1"  # weekly, Monday 06:00
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+          initContainers:
+          # Recyclarr's own migration/state logic needs to fully own its
+          # config directory (write access, not just the one yml file) --
+          # a read-only Secret/ConfigMap mount alone isn't enough, so this
+          # copies the sealed config into a writable emptyDir first. Same
+          # pattern as apps/dashboard's homepage-config-pvc, for the same
+          # underlying reason.
+          - name: copy-config
+            image: busybox:1.36
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            command: ["sh", "-c", "cp /config-src/recyclarr.yml /config/recyclarr.yml"]
+            volumeMounts:
+            - name: config-src
+              mountPath: /config-src
+            - name: config
+              mountPath: /config
+          containers:
+          - name: recyclarr
+            image: ghcr.io/recyclarr/recyclarr:8.7.1
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            command: ["sh", "-c", "recyclarr sync -c /config/recyclarr.yml"]
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
+            volumeMounts:
+            - name: config
+              mountPath: /config
+          volumes:
+          - name: config-src
+            secret:
+              secretName: recyclarr-config
+          - name: config
+            emptyDir: {}
