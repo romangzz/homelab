@@ -1,0 +1,17 @@
+[extend]
+useDefault = true
+
+# SealedSecret ciphertext retains the original key names (QBIT_PASSWORD,
+# tunnel-token, SESSION_SECRET, etc.) so the underlying key-name-based
+# rules still match -- but the value is kubeseal's hybrid RSA-OAEP+AES-GCM
+# output, always well over 300 base64 characters regardless of how short
+# the original plaintext was (fixed encryption overhead). Real plaintext
+# secrets (API keys, passwords, tokens) are essentially never this long,
+# so this reliably distinguishes ciphertext from an actual leak without
+# needing to path-exclude any file (which would also blind the scanner to
+# a real secret accidentally added elsewhere in the same file).
+[allowlist]
+description = "SealedSecret ciphertext (kubeseal output, not a real secret)"
+regexes = [
+  '''^[A-Za-z0-9+/]{300,}={0,2}$''',
+]

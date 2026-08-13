@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: omada-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/romangzz/homelab'
+    targetRevision: main
+    path: apps/omada
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: omada
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

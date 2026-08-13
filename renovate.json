@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "kubernetes": {
+    "managerFilePatterns": ["/^apps\\/.+\\.ya?ml$/"]
+  },
+  "argocd": {
+    "managerFilePatterns": [
+      "/^apps\\/argocd-apps\\/.+\\.yaml$/",
+      "/^apps\\/monitoring\\/(stack|loki)\\.yaml$/"
+    ]
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["kubernetes"],
+      "commitMessagePrefix": "chore(deps):",
+      "addLabels": ["kubernetes"]
+    },
+    {
+      "matchManagers": ["argocd"],
+      "commitMessagePrefix": "chore(deps):",
+      "addLabels": ["helm"]
+    }
+  ]
+}

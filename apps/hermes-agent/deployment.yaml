@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hermes-agent
+  namespace: ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hermes-agent
+  template:
+    metadata:
+      labels:
+        app: hermes-agent
+    spec:
+      containers:
+      - name: hermes-agent
+        image: nousresearch/hermes-agent:latest
+        args:
+        - gateway
+        - run
+        ports:
+        - containerPort: 8642
+          name: api
+        - containerPort: 9119
+          name: dashboard
+        env:
+        - name: HOME
+          value: "/opt/data"
+        - name: HERMES_HOME
+          value: "/opt/data"
+        - name: OPENAI_API_BASE
+          value: "http://ollama-service.ai.svc.cluster.local:11434/v1"
+        - name: OPENAI_API_KEY
+          value: "ollama-no-key-needed"
+        - name: DEFAULT_MODEL
+          value: "qwen2.5-coder:14b"
+        - name: API_SERVER_ENABLED
+          value: "true"
+        - name: API_SERVER_HOST
+          value: "0.0.0.0"
+        - name: API_SERVER_KEY
+          value: "hermes-no-key-needed"
+        - name: GATEWAY_ALLOW_ALL_USERS
+          value: "true"
+        - name: HERMES_DASHBOARD
+          value: "false"
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        volumeMounts:
+        - name: hermes-data
+          mountPath: /opt/data
+        - name: config-volume
+          mountPath: /opt/data/config.yaml
+          subPath: config.yaml
+        - name: config-volume
+          mountPath: /opt/data/.hermes/config.yaml
+          subPath: config.yaml
+        - name: config-volume
+          mountPath: /opt/data/.hermes/profiles/default/config.yaml
+          subPath: config.yaml
+      volumes:
+      - name: hermes-data
+        persistentVolumeClaim:
+          claimName: hermes-agent-pvc
+      - name: config-volume
+        configMap:
+          name: hermes-agent-config

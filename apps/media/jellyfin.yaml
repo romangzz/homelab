@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jellyfin
+  template:
+    metadata:
+      labels:
+        app: jellyfin
+    spec:
+      # Uncomment the next line if you want to use NVIDIA GPU for hardware transcoding
+      runtimeClassName: nvidia
+      containers:
+      - name: jellyfin
+        image: jellyfin/jellyfin:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: 8096
+          name: http
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: "Europe/Madrid"
+        resources:
+          limits:
+            memory: 4Gi
+            cpu: "2"
+            # Uncomment the next line if you want to use NVIDIA GPU for hardware transcoding
+            nvidia.com/gpu: 1
+          requests:
+            memory: 1Gi
+            cpu: 500m
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: media
+          mountPath: /data
+          readOnly: true
+      volumes:
+      - name: config
+        persistentVolumeClaim:
+          claimName: jellyfin-config-pvc
+      - name: media
+        persistentVolumeClaim:
+          claimName: media-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyfin-service
+spec:
+  ports:
+  - port: 8096
+    targetPort: 8096
+    name: http
+  selector:
+    app: jellyfin
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jellyfin-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: jellyfin.home.romangzz.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: jellyfin-service
+            port:
+              number: 8096

@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authelia
+  namespace: auth
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: authelia
+  template:
+    metadata:
+      labels:
+        app: authelia
+    spec:
+      # The Service is also named "authelia", which would otherwise make
+      # Kubernetes inject AUTHELIA_PORT/AUTHELIA_SERVICE_* env vars --
+      # colliding with Authelia's own AUTHELIA_-prefixed config overrides.
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: authelia
+        image: authelia/authelia:4.39.20
+        args:
+          - "--config"
+          - "/etc/authelia/configuration.yml"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        ports:
+        - containerPort: 9091
+          name: http
+        env:
+        - name: TZ
+          value: "Europe/Madrid"
+        - name: AUTHELIA_SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: authelia-secrets
+              key: SESSION_SECRET
+        - name: AUTHELIA_STORAGE_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: authelia-secrets
+              key: STORAGE_ENCRYPTION_KEY
+        - name: AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: authelia-secrets
+              key: RESET_PASSWORD_JWT_SECRET
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/authelia/configuration.yml
+          subPath: configuration.yml
+          readOnly: true
+        - name: users
+          mountPath: /etc/authelia/users_database.yml
+          subPath: users_database.yml
+          readOnly: true
+        - name: data
+          mountPath: /config
+      volumes:
+      - name: config
+        configMap:
+          name: authelia-config
+      - name: users
+        secret:
+          secretName: authelia-users
+      - name: data
+        persistentVolumeClaim:
+          claimName: authelia-pvc

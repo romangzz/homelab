@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homepage
+  namespace: dashboard
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: homepage
+  template:
+    metadata:
+      labels:
+        app: homepage
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+      # Homepage's entrypoint wants to own the whole /app/config directory
+      # (it auto-copies default skeleton files for anything missing, and
+      # writes its own logs there) -- individual read-only ConfigMap
+      # subPath mounts don't satisfy that. Copy this pod's config into a
+      # real writable PVC instead; git via the ConfigMap stays the source
+      # of truth, re-copied in on every pod start.
+      - name: copy-config
+        image: busybox:1.36
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        command:
+          - sh
+          - -c
+          - cp -f /config-src/*.yaml /app/config/
+        volumeMounts:
+        - name: config-src
+          mountPath: /config-src
+        - name: config
+          mountPath: /app/config
+      containers:
+      - name: homepage
+        image: ghcr.io/gethomepage/homepage:v1.13.2
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: HOMEPAGE_ALLOWED_HOSTS
+          value: "home.romangzz.com,$(POD_IP):3000"
+        - name: TZ
+          value: "Europe/Madrid"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /api/healthcheck
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /api/healthcheck
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+      volumes:
+      - name: config-src
+        configMap:
+          name: homepage-config
+      - name: config
+        persistentVolumeClaim:
+          claimName: homepage-config-pvc

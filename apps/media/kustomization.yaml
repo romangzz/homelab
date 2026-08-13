@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: media
+
+resources:
+  - pv.yaml
+  - pvc.yaml
+  - vpn-secret.yaml
+  - networkpolicy.yaml
+  - resourcequota.yaml
+
+
+  - jellyfin.yaml
+  - qbittorrent.yaml
+  - radarr.yaml
+  - sonarr.yaml
+  - prowlarr.yaml
+  - flaresolverr.yaml
+  - bazarr.yaml
+  - whisper.yaml
+  - subgen.yaml
+  - unpackerr-secret.yaml
+  - unpackerr.yaml
+  - iso-extractor.yaml
+

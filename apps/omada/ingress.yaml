@@ -1,0 +1,26 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: omada-controller-ingressroute
+  namespace: omada
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`omada.home.romangzz.com`)
+      kind: Rule
+      middlewares:
+        - name: authelia-forwardauth
+      services:
+        - name: omada-internal-service
+          port: 8043
+          scheme: https
+          serversTransport: omada-transport
+---
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: omada-transport
+  namespace: omada
+spec:
+  insecureSkipVerify: true

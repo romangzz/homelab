@@ -1,0 +1,84 @@
+name: Validate manifests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  KUSTOMIZE_VERSION: v5.8.1
+  KUBECONFORM_VERSION: v0.8.0
+  KUBERNETES_VERSION: "1.35.0"
+
+jobs:
+  kustomize-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kustomize
+        run: |
+          curl -sLo kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf kustomize.tar.gz
+          sudo mv kustomize /usr/local/bin/kustomize
+
+      - name: Install kubeconform
+        run: |
+          curl -sLo kubeconform.tar.gz "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          tar -xzf kubeconform.tar.gz
+          sudo mv kubeconform /usr/local/bin/kubeconform
+
+      # Renders every kustomization.yaml in the repo and schema-validates
+      # the output in strict mode -- this is what would have caught the
+      # misindented `annotations:` block that shipped in
+      # apps/monitoring/dashboard-server.yaml (a stray field at the
+      # ConfigMap root, invisible to a plain YAML parse, but rejected by
+      # -strict since it's not part of the ConfigMap schema). CRDs without
+      # a bundled schema (SealedSecret, Middleware, IngressRoute,
+      # ClusterIssuer, Certificate, TLSStore, argoproj.io/Application) are
+      # skipped rather than failed -- there's no public schema to check
+      # them against, but the surrounding built-in resources still get
+      # full validation.
+      - name: Build and validate every kustomization
+        run: |
+          set -e
+          overall=0
+          for dir in $(find apps clusters -name kustomization.yaml -exec dirname {} \; | sort -u); do
+            echo "::group::$dir"
+            rendered=$(mktemp)
+            if ! kustomize build "$dir" > "$rendered"; then
+              echo "::error::kustomize build failed for $dir"
+              overall=1
+              echo "::endgroup::"
+              continue
+            fi
+            if ! kubeconform -strict -ignore-missing-schemas -kubernetes-version "$KUBERNETES_VERSION" -summary "$rendered"; then
+              echo "::error::kubeconform validation failed for $dir"
+              overall=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $overall
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          curl -sLo gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+
+      # --no-git: scans the tree as checked out, not full history. Full
+      # history already contains known, already-rotated leaks from before
+      # SealedSecrets was adopted (confirmed via a one-time manual audit)
+      # -- those can't be un-leaked by rewriting history on a repo that
+      # was already private and cloned, and scanning history on every run
+      # would just fail forever on things already fixed. This mode is
+      # purely a forward guard against a new plaintext secret landing.
+      - name: Scan for secrets
+        run: gitleaks detect --source . --config .gitleaks.toml --no-git --redact -v

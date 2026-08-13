@@ -1,0 +1,14 @@
+# Registers the wildcard cert as Traefik's default certificate. A TLSStore
+# named "default" is a Traefik convention: any route that doesn't specify
+# its own tls.secretName falls back to this one automatically, on any
+# entrypoint, in any namespace. Today those routes are silently using
+# Traefik's built-in self-signed cert — this replaces that, cluster-wide,
+# with zero changes needed to any existing Ingress/IngressRoute.
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: kube-system
+spec:
+  defaultCertificate:
+    secretName: wildcard-home-romangzz-com-tls

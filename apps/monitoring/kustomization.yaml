@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - limitrange.yaml
+  - stack.yaml
+  - loki.yaml
+  - alloy.yaml
+  - dashboard-loki-app-logs.yaml
+  - node-sysctl-tuner.yaml

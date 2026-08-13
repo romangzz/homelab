@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: subgen
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: subgen
+  template:
+    metadata:
+      labels:
+        app: subgen
+    spec:
+      containers:
+      - name: subgen
+        image: mccloud/subgen:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: 9000
+          name: http
+        env:
+        - name: WHISPER_MODEL
+          value: "base"
+        - name: TRANSCRIBE_DEVICE
+          value: "cpu"
+        - name: TZ
+          value: "Europe/Madrid"
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: "2"
+          requests:
+            memory: 512Mi
+            cpu: 250m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: subgen-service
+spec:
+  ports:
+  - port: 9000
+    targetPort: 9000
+    name: http
+  selector:
+    app: subgen
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: subgen-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: subgen.home.romangzz.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: subgen-service
+            port:
+              number: 9000

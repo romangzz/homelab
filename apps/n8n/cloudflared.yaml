@@ -1,0 +1,52 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: cloudflare-tunnel-token
+  namespace: n8n
+spec:
+  encryptedData:
+    tunnel-token: AgA5e6YDeR4SLias+OTBN21jx07Telv15iVC9m1ZihPdDByJWMAtA1h8etRpa7r4/AxsY/iRrgHb0iyJN5yLpnH88heamH4soT1I109MXzXqRq9C9BhOf153obj8Y/2i2cxEmHgpQX6+m0BsSki5WhYz08esse2r18gdvzaKaODabxuuZjGp/dnviL8jucloY/cUW5vFdoBsLcSVDdkMaKLpBhyevZ/gCDLvkLbksFxQcsmOi7q1kGnF59VqWaHUmKQzADXw6stu0UN5iGfUdvaJVUA1Qnbgy9jTPo9hB/8Ds+vn54pZWYb4VcdUMrVm4DhbtJ3F/vSduy9r4QuIRZbSJS/gGyRxpE7F6Po9z3H7PbXg2uLwf3aYdsI7r2ErMnAE9e7+LJvIt+j2zh5PjS5Dclx4lDzTS1+otoF40KxuzlxnNeau4ZsHJCvZE41AhNjIduSacZGXsLfGusDoy9oSXLd1AvNjhEWQ9SzveP4ctFZkh4ayuob/VrY0wFivdbdcbxRzvtHekjF6Sj3ZwBDRpzjnbPnEBHGad32V38txW69bnThdxfohbUP96uSkDxWuyCto5MB3rkDl/y1Dub82OxWiCbGZ/dhsbPBlR9sqGU48x87dhQQVxgJkdL1grtt3BRqhI5P1h6Y7sbq5Afqz7JKf4P+/zShOn0zPQBBk9Blsg0g7tno7inbWaYMh8eJRBEljQ1maXXD5H+s0AdX/kgBZmC41GN4xPukLnR7pdkk9FGPZEbcjWliWHz+L9aesC6VfeaVVJk36coa7C/v6JA8So7zYJ8l6lVwTYKnSDnwMvNinc/O5MxqJtWl9uWaqVduBtSCVrTwcvcU7DOAcX/kbwMIpNCno2BtZoZ2ONn3jtYZH3A73LgyncxMYGgQZw3m0rY1vzCSBtlu9Xgx001aJkDe0QYV4fGDZPElOSZaCb8SevcY4
+  template:
+    metadata:
+      name: cloudflare-tunnel-token
+      namespace: n8n
+    type: Opaque
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: cloudflared
+  name: cloudflared
+  namespace: n8n
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      containers:
+      - args:
+        - tunnel
+        - --no-autoupdate
+        - run
+        env:
+        - name: TUNNEL_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: tunnel-token
+              name: cloudflare-tunnel-token
+        image: cloudflare/cloudflared:latest
+        name: cloudflared
+        resources:
+          limits:
+            cpu: 200m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi

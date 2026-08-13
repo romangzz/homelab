@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hermes-agent
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/romangzz/homelab'
+    targetRevision: main
+    path: apps/hermes-agent
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: ai
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

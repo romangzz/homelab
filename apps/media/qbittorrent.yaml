@@ -1,0 +1,505 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qbittorrent
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: qbittorrent
+  template:
+    metadata:
+      labels:
+        app: qbittorrent
+    spec:
+      terminationGracePeriodSeconds: 60
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - jellyfin
+            topologyKey: "kubernetes.io/hostname"
+      initContainers:
+      - name: cross-seed-init
+        image: ghcr.io/cross-seed/cross-seed:latest
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        command:
+        - node
+        - /scripts/configure.js
+        env:
+        - name: CONFIG_DIR
+          value: /qbittorrent-config/cross-seed
+        - name: QBIT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: vpn-secret
+              key: QBIT_USERNAME
+        - name: QBIT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: vpn-secret
+              key: QBIT_PASSWORD
+        volumeMounts:
+        - name: config
+          mountPath: /qbittorrent-config
+        - name: prowlarr-config
+          mountPath: /prowlarr-config
+          readOnly: true
+        - name: cross-seed-scripts
+          mountPath: /scripts
+      containers:
+      - name: vpn
+        image: qmcgaw/gluetun:latest
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
+              - CHOWN
+            drop:
+              - ALL
+          runAsNonRoot: false
+          runAsUser: 0
+          runAsGroup: 0
+          allowPrivilegeEscalation: true
+        envFrom:
+        - secretRef:
+            name: vpn-secret
+        env:
+        - name: FIREWALL_OUTBOUND_SUBNETS
+          value: "10.42.0.0/16,10.43.0.0/16,172.16.0.0/12,192.168.0.0/16"
+        - name: VPN_INBOUND_PORTS
+          value: "8080"
+        - name: VPN_PORT_FORWARDING
+          value: "on"
+        - name: VPN_PORT_FORWARDING_PROVIDER
+          value: "protonvpn"
+        - name: HTTP_CONTROL_SERVER_ADDRESS
+          value: ":8000"
+        - name: HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE
+          value: '{"auth":"none"}'
+        - name: PUBLICIP_FILE
+          value: "/tmp/ip"
+        - name: VPN_PORT_FORWARDING_STATUS_FILE
+          value: "/tmp/forwarded_port"
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 6881
+          name: torrent-tcp
+          protocol: TCP
+        - containerPort: 6881
+          name: torrent-udp
+          protocol: UDP
+        volumeMounts:
+        - name: gluetun-tmp
+          mountPath: /tmp
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 500m
+          requests:
+            memory: 128Mi
+            cpu: 100m
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "sleep 20"]
+      - name: qbittorrent
+        image: lscr.io/linuxserver/qbittorrent:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: "Europe/Madrid"
+        - name: WEBUI_PORT
+          value: "8080"
+        - name: WEBUI_HOST
+          value: "0.0.0.0"
+        - name: WEBUI_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: vpn-secret
+              key: QBIT_USERNAME
+        - name: WEBUI_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: vpn-secret
+              key: QBIT_PASSWORD
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: "1"
+          requests:
+            memory: 512Mi
+            cpu: 250m
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: media
+          mountPath: /data
+        - name: media
+          mountPath: /downloads
+          subPath: torrents
+      - name: port-updater
+        image: curlimages/curl:latest
+        securityContext:
+          capabilities:
+            drop:
+              - ALL
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        command:
+        - /bin/sh
+        - /scripts/update-port.sh
+        env:
+        - name: QBIT_HOST
+          value: "http://localhost:8080"
+        - name: GLUETUN_HOST
+          value: "http://localhost:8000"
+        - name: CHECK_INTERVAL
+          value: "45"
+        envFrom:
+        - secretRef:
+            name: vpn-secret
+        volumeMounts:
+        - name: updater-script
+          mountPath: /scripts
+        - name: tmp-dir
+          mountPath: /tmp
+        resources:
+          limits:
+            memory: 64Mi
+            cpu: 100m
+          requests:
+            memory: 32Mi
+            cpu: 10m
+      - name: cross-seed
+        image: ghcr.io/cross-seed/cross-seed:latest
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        command:
+        - cross-seed
+        - daemon
+        env:
+        - name: CONFIG_DIR
+          value: /qbittorrent-config/cross-seed
+        - name: TZ
+          value: "Europe/Madrid"
+        volumeMounts:
+        - name: config
+          mountPath: /qbittorrent-config
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 500m
+          requests:
+            memory: 128Mi
+            cpu: 10m
+
+      volumes:
+      - name: config
+        persistentVolumeClaim:
+          claimName: qbittorrent-config-pvc
+      - name: media
+        persistentVolumeClaim:
+          claimName: media-pvc
+      - name: updater-script
+        configMap:
+          name: qbittorrent-port-updater
+          defaultMode: 0755
+      - name: tmp-dir
+        emptyDir: {}
+      - name: gluetun-tmp
+        emptyDir: {}
+      - name: prowlarr-config
+        persistentVolumeClaim:
+          claimName: prowlarr-config-pvc
+          readOnly: true
+      - name: cross-seed-scripts
+        configMap:
+          name: cross-seed-scripts
+          defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent-service
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  selector:
+    app: qbittorrent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent-torrent-service
+spec:
+  type: NodePort
+  ports:
+  - port: 6881
+    targetPort: 6881
+    nodePort: 30881
+    name: torrent-tcp
+    protocol: TCP
+  - port: 6881
+    targetPort: 6881
+    nodePort: 30881
+    name: torrent-udp
+    protocol: UDP
+  selector:
+    app: qbittorrent
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qbittorrent-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+    traefik.ingress.kubernetes.io/router.middlewares: auth-authelia-forwardauth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: qbittorrent.home.romangzz.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: qbittorrent-service
+            port:
+              number: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qbittorrent-port-updater
+data:
+  update-port.sh: |
+    #!/bin/sh
+    set -e
+
+    QBIT_HOST=${QBIT_HOST:-"http://localhost:8080"}
+    GLUETUN_HOST=${GLUETUN_HOST:-"http://localhost:8000"}
+    CHECK_INTERVAL=${CHECK_INTERVAL:-30}
+
+    echo "Starting qBittorrent port sync script..."
+    LAST_PORT=""
+
+    while true; do
+      # Fetch the forwarded port from Gluetun local HTTP API
+      GLUETUN_RESPONSE=$(curl -s --fail "${GLUETUN_HOST}/v1/portforward" || true)
+      
+      if [ -z "$GLUETUN_RESPONSE" ]; then
+        echo "Warning: Failed to fetch port from Gluetun API. Retrying in ${CHECK_INTERVAL}s..."
+        sleep "${CHECK_INTERVAL}"
+        continue
+      fi
+
+      PORT=$(echo "$GLUETUN_RESPONSE" | grep -oE '"port":[0-9]+' | cut -d: -f2 || true)
+      if [ -z "$PORT" ] || [ "$PORT" -eq 0 ]; then
+        echo "Warning: Fetched invalid/empty port from Gluetun. VPN might not be established. Retrying in ${CHECK_INTERVAL}s..."
+        sleep "${CHECK_INTERVAL}"
+        continue
+      fi
+
+      if [ "$PORT" != "$LAST_PORT" ]; then
+        echo "Port change detected! Old: '$LAST_PORT', New: '$PORT'. Updating qBittorrent..."
+
+        COOKIE_FILE="/tmp/qbit_cookie.txt"
+        
+        # Authenticate with qBittorrent Web API (Referer header is required to bypass CSRF protection checks)
+        LOGIN_STATUS=$(curl -s -i -o /dev/null -w "%{http_code}" -c "$COOKIE_FILE" \
+          -H "Referer: ${QBIT_HOST}" \
+          -d "username=${QBIT_USERNAME}&password=${QBIT_PASSWORD}" \
+          "${QBIT_HOST}/api/v2/auth/login" || true)
+
+        if [ "$LOGIN_STATUS" != "200" ] && [ "$LOGIN_STATUS" != "204" ]; then
+          echo "Error: Failed to login to qBittorrent (HTTP status $LOGIN_STATUS). Retrying in ${CHECK_INTERVAL}s..."
+          sleep "${CHECK_INTERVAL}"
+          continue
+        fi
+
+        # Update the incoming port in qBittorrent preferences
+        UPDATE_STATUS=$(curl -s -i -o /dev/null -w "%{http_code}" -b "$COOKIE_FILE" \
+          -H "Referer: ${QBIT_HOST}" \
+          -X POST -d "json=%7B%22listen_port%22%3A${PORT}%7D" \
+          "${QBIT_HOST}/api/v2/app/setPreferences" || true)
+
+        if [ "$UPDATE_STATUS" = "200" ] || [ "$UPDATE_STATUS" = "204" ]; then
+          echo "Successfully updated qBittorrent incoming port to $PORT."
+          LAST_PORT="$PORT"
+        else
+          echo "Error: Failed to update qBittorrent port (HTTP status $UPDATE_STATUS)."
+        fi
+
+        rm -f "$COOKIE_FILE"
+      fi
+
+      sleep "${CHECK_INTERVAL}"
+    done
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cross-seed-scripts
+data:
+  configure.js: |
+    const fs = require('fs');
+    const http = require('http');
+    const { execSync } = require('child_process');
+    const path = require('path');
+
+    // Ensure cross-seed directory and output directory exist
+    const crossSeedDir = '/qbittorrent-config/cross-seed';
+    const outputDir = path.join(crossSeedDir, 'output');
+    fs.mkdirSync(outputDir, { recursive: true });
+
+    // Run cross-seed gen-config to generate default config if not present
+    const configPath = path.join(crossSeedDir, 'config.js');
+    if (!fs.existsSync(configPath)) {
+      console.log("Generating default cross-seed config...");
+      try {
+        execSync('cross-seed gen-config', {
+          env: { ...process.env, CONFIG_DIR: crossSeedDir },
+          stdio: 'inherit'
+        });
+      } catch (e) {
+        console.error("Error generating cross-seed config:", e.message);
+      }
+    }
+
+    // Function to read Prowlarr API key
+    function getProwlarrApiKey() {
+      try {
+        const configXmlPath = '/prowlarr-config/config.xml';
+        if (!fs.existsSync(configXmlPath)) {
+          console.log("Prowlarr config.xml not found at /prowlarr-config/config.xml");
+          return null;
+        }
+        const xml = fs.readFileSync(configXmlPath, 'utf8');
+        const match = xml.match(/<ApiKey>(.*?)<\/ApiKey>/);
+        return match ? match[1] : null;
+      } catch (e) {
+        console.error("Error reading Prowlarr config.xml:", e.message);
+        return null;
+      }
+    }
+
+    // Function to fetch active indexers from Prowlarr
+    function fetchProwlarrIndexers(apiKey) {
+      return new Promise((resolve) => {
+        const req = http.get('http://prowlarr-service:9696/api/v1/indexer', {
+          headers: { 'X-Api-Key': apiKey },
+          timeout: 5000
+        }, (res) => {
+          if (res.statusCode !== 200) {
+            console.error(`Prowlarr API returned status code ${res.statusCode}`);
+            resolve([]);
+            return;
+          }
+          let data = '';
+          res.on('data', (chunk) => data += chunk);
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(data));
+            } catch (e) {
+              console.error("Failed to parse Prowlarr API response:", e.message);
+              resolve([]);
+            }
+          });
+        });
+        
+        req.on('error', (e) => {
+          console.error("Failed to connect to Prowlarr API:", e.message);
+          resolve([]);
+        });
+        
+        req.on('timeout', () => {
+          console.error("Prowlarr API request timed out");
+          req.destroy();
+          resolve([]);
+        });
+      });
+    }
+
+    async function main() {
+      const apiKey = getProwlarrApiKey();
+      let torznabUrls = [];
+      
+      if (apiKey) {
+        console.log("Found Prowlarr API Key. Querying indexers...");
+        // Try up to 3 times to fetch indexers
+        for (let i = 0; i < 3; i++) {
+          const indexers = await fetchProwlarrIndexers(apiKey);
+          if (indexers.length > 0) {
+            torznabUrls = indexers
+              .filter(idx => idx.enable && idx.protocol === 'torrent')
+              .map(idx => `http://prowlarr-service:9696/${idx.id}/api?apikey=${apiKey}`);
+            console.log(`Fetched ${torznabUrls.length} active torrent indexers from Prowlarr.`);
+            break;
+          }
+          if (i < 2) {
+            console.log("Retrying indexer fetch in 5 seconds...");
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+        }
+      } else {
+        console.log("Could not retrieve Prowlarr API Key. Proceeding with empty indexer list.");
+      }
+
+      // Load, parse, and update config.js
+      if (fs.existsSync(configPath)) {
+        try {
+          // Clear require cache to ensure fresh load
+          delete require.cache[require.resolve(configPath)];
+          const config = require(configPath);
+          
+          // Override specific configuration settings
+          config.torznab = torznabUrls;
+          config.action = "inject";
+          config.torrentClients = [
+            `qbittorrent:http://${process.env.QBIT_USERNAME}:${process.env.QBIT_PASSWORD}@127.0.0.1:8080`
+          ];
+          config.qbittorrentUrl = undefined;
+          config.torrentDir = null;
+          config.outputDir = null;
+          config.matchMode = "strict";
+          config.seasonFromEpisodes = null;
+          
+          // Set defaults for behavioral settings if not already set by the user
+          if (config.useClientTorrents === undefined) config.useClientTorrents = true;
+          if (config.includeSingleEpisodes === undefined) config.includeSingleEpisodes = true;
+          if (config.searchCadence === undefined) config.searchCadence = "1d";
+          if (config.excludeRecentSearch === undefined) config.excludeRecentSearch = "2w";
+          
+          // Write modified config back to the file
+          fs.writeFileSync(configPath, `module.exports = ${JSON.stringify(config, null, 2)};\n`);
+          console.log("Successfully updated cross-seed config.js.");
+        } catch (e) {
+          console.error("Error updating cross-seed config.js:", e.message);
+        }
+      } else {
+        console.error("cross-seed config.js does not exist, cannot update.");
+      }
+    }
+
+    main();

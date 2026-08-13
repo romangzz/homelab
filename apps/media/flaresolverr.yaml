@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flaresolverr
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: flaresolverr
+  template:
+    metadata:
+      labels:
+        app: flaresolverr
+    spec:
+      containers:
+      - name: flaresolverr
+        image: ghcr.io/flaresolverr/flaresolverr:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: 8191
+          name: http
+        env:
+        - name: LOG_LEVEL
+          value: "info"
+        - name: TZ
+          value: "Europe/Madrid"
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: "1"
+          requests:
+            memory: 256Mi
+            cpu: 100m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flaresolverr-service
+spec:
+  ports:
+  - port: 8191
+    targetPort: 8191
+    name: http
+  selector:
+    app: flaresolverr

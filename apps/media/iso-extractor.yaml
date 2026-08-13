@@ -1,0 +1,175 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iso-extractor
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: iso-extractor
+  template:
+    metadata:
+      labels:
+        app: iso-extractor
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - jellyfin
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: iso-extractor
+        image: jlesage/makemkv:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: 5800
+          name: http
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: "Europe/Madrid"
+        - name: AUTO_UPDATE_KEY
+          value: "1"
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: "1"
+          requests:
+            memory: 256Mi
+            cpu: 100m
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: media
+          mountPath: /data
+        - name: scripts
+          mountPath: /custom-cont-init.d/start-watcher.sh
+          subPath: start-watcher.sh
+        - name: scripts
+          mountPath: /scripts
+      volumes:
+      - name: config
+        persistentVolumeClaim:
+          claimName: iso-extractor-config-pvc
+      - name: media
+        persistentVolumeClaim:
+          claimName: media-pvc
+      - name: scripts
+        configMap:
+          name: iso-extractor-scripts
+          defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iso-extractor-service
+spec:
+  ports:
+  - port: 5800
+    targetPort: 5800
+    name: http
+  selector:
+    app: iso-extractor
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: iso-extractor-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: iso-extractor.home.romangzz.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: iso-extractor-service
+            port:
+              number: 5800
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: iso-extractor-scripts
+data:
+  start-watcher.sh: |
+    #!/bin/sh
+    echo "Initializing ISO Watcher service..."
+    chmod +x /scripts/watch-iso.sh
+    /scripts/watch-iso.sh > /config/watch-iso.log 2>&1 &
+    echo "ISO Watcher started in the background."
+  watch-iso.sh: |
+    #!/bin/sh
+    # Watch directory for ISO files and convert them to MKV using makemkvcon
+
+    WATCH_DIR=${WATCH_DIR:-"/data/torrents"}
+    INTERVAL=${INTERVAL:-60}
+
+    echo "Starting ISO to MKV watcher loop on $WATCH_DIR..."
+
+    while true; do
+      # Find all .iso files recursively in WATCH_DIR (excluding any in progress)
+      find "$WATCH_DIR" -type f -name "*.iso" | while read -r iso_file; do
+        if [ ! -f "$iso_file" ]; then
+          continue
+        fi
+
+        # Check if the file is still being written to (wait and check if size increases)
+        size1=$(stat -c %s "$iso_file")
+        sleep 5
+        size2=$(stat -c %s "$iso_file")
+        if [ "$size1" -ne "$size2" ]; then
+          echo "File is still downloading or copying: $iso_file (Size changed from $size1 to $size2). Skipping..."
+          continue
+        fi
+
+        parent_dir=$(dirname "$iso_file")
+        base_name=$(basename "$iso_file" .iso)
+        mkv_output_dir="$parent_dir/$base_name"
+
+        # Skip if done or currently processing
+        if [ -f "${iso_file}.done" ] || [ -f "${iso_file}.processing" ]; then
+          continue
+        fi
+
+        # Check if we already have files in the output directory
+        if [ -d "$mkv_output_dir" ] && ls "$mkv_output_dir"/*.mkv >/dev/null 2>&1; then
+          echo "MKV already exists in $mkv_output_dir. Marking as done."
+          touch "${iso_file}.done"
+          continue
+        fi
+
+        echo "Found new ISO to process: $iso_file"
+        touch "${iso_file}.processing"
+        mkdir -p "$mkv_output_dir"
+
+        echo "Running MakeMKV for $iso_file..."
+        makemkvcon mkv "iso:$iso_file" all "$mkv_output_dir"
+        status=$?
+
+        if [ $status -eq 0 ]; then
+          echo "Successfully converted ISO to MKV in $mkv_output_dir"
+          touch "${iso_file}.done"
+        else
+          echo "Failed to convert ISO: $iso_file (Exit code: $status)"
+        fi
+        rm -f "${iso_file}.processing"
+      done
+
+      sleep "$INTERVAL"
+    done

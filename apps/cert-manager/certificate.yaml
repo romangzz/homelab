@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-home-romangzz-com
+  namespace: kube-system  # Traefik (k3s-bundled) reads its default cert from here
+spec:
+  secretName: wildcard-home-romangzz-com-tls
+  issuerRef:
+    name: letsencrypt-dns
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.home.romangzz.com"
+    - "home.romangzz.com"

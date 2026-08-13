@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+  namespace: monitoring
+data:
+  alloy.hcl: |
+    logging {
+      level = "info"
+      format = "logfmt"
+    }
+
+    // Discover pods for log ingestion
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+
+    // Relabel pod targets to define standard labels
+    discovery.relabel "pod_logs" {
+      targets = discovery.kubernetes.pods.targets
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_namespace"]
+        target_label  = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_container_name"]
+        target_label  = "container"
+      }
+      rule {
+        action = "replace"
+        source_labels = [
+          "__meta_kubernetes_pod_label_app",
+          "__meta_kubernetes_pod_label_k8s_app",
+          "__meta_kubernetes_pod_label_app_kubernetes_io_name",
+          "__meta_kubernetes_container_name",
+        ]
+        separator = ";"
+        regex = "^(?:;*)([^;]+)(?:;.*)?$"
+        replacement = "$1"
+        target_label = "app"
+      }
+    }
+
+    // Ingest logs from discovered pods
+    loki.source.kubernetes "logs" {
+      targets    = discovery.relabel.pod_logs.output
+      forward_to = [loki.write.loki_write.receiver]
+    }
+
+    // Remote write logs to Loki
+    loki.write "loki_write" {
+      endpoint {
+        url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+      }
+    }
+
+    // Scrape node metrics via node_exporter (host network)
+    prometheus.scrape "node_metrics" {
+      targets    = [{ __address__ = "127.0.0.1:9100" }]
+      forward_to = [prometheus.remote_write.node_metrics.receiver]
+    }
+
+    // Remote write metrics to Prometheus
+    prometheus.remote_write "node_metrics" {
+      endpoint {
+        url = "http://prometheus-k8s.monitoring.svc.cluster.local:9090/api/v1/write"
+      }
+    }
+

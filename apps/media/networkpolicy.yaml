@@ -1,0 +1,64 @@
+# Egress restrictions for the media apps confirmed to have no runtime
+# internet dependency -- they only process files already on disk, or talk
+# to other apps within this namespace. NOT applied to jellyfin, radarr,
+# sonarr, bazarr, prowlarr, flaresolverr, or qbittorrent (real outbound
+# needs: metadata/subtitle providers, indexers, VPN tunnel), and NOT
+# applied to subgen/whisper either -- both download ASR models from the
+# internet at startup with no persistent cache, so restricting them broke
+# whisper immediately (CrashLoopBackOff, "Network is unreachable" trying
+# to fetch its model) and would very likely do the same to subgen.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: unpackerr-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: unpackerr
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: sonarr
+      ports:
+        - protocol: TCP
+          port: 8989
+    - to:
+        - podSelector:
+            matchLabels:
+              app: radarr
+      ports:
+        - protocol: TCP
+          port: 7878
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: iso-extractor-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: iso-extractor
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unpackerr
+  labels:
+    app: unpackerr
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: unpackerr
+  template:
+    metadata:
+      labels:
+        app: unpackerr
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: unpackerr
+        image: golift/unpackerr:latest
+        env:
+        - name: TZ
+          value: "Europe/Madrid"
+        - name: UN_DEBUG
+          value: "false"
+        - name: UN_INTERVAL
+          value: "2m"
+        # Sonarr configuration
+        - name: UN_SONARR_0_URL
+          value: "http://sonarr-service:8989"
+        - name: UN_SONARR_0_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: unpackerr-secret
+              key: SONARR_API_KEY
+        - name: UN_SONARR_0_PATHS_0
+          value: "/data/torrents"
+        - name: UN_SONARR_0_DELETE_DELAY
+          value: "5m"
+        # Radarr configuration
+        - name: UN_RADARR_0_URL
+          value: "http://radarr-service:7878"
+        - name: UN_RADARR_0_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: unpackerr-secret
+              key: RADARR_API_KEY
+        - name: UN_RADARR_0_PATHS_0
+          value: "/data/torrents"
+        - name: UN_RADARR_0_DELETE_DELAY
+          value: "5m"
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 500m
+          requests:
+            memory: 128Mi
+            cpu: 100m
+        volumeMounts:
+        - name: media
+          mountPath: /data
+      volumes:
+      - name: media
+        persistentVolumeClaim:
+          claimName: media-pvc

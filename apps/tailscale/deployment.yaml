@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tailscale-subnet-router
+  namespace: tailscale
+  labels:
+    app: tailscale
+spec:
+  replicas: 1
+  # Tailscale runs as a single replica to maintain a single stable node identity in your tailnet
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: tailscale
+  template:
+    metadata:
+      labels:
+        app: tailscale
+    spec:
+      containers:
+      - name: tailscale
+        image: tailscale/tailscale:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN # Required to configure routing and the tun interface
+        env:
+        # 1. TS_AUTHKEY: References the tailscale-auth secret we created
+        - name: TS_AUTHKEY
+          valueFrom:
+            secretKeyRef:
+              name: tailscale-auth
+              key: authkey
+
+        # TS_KUBE_SECRET: Set to empty string to disable storing state in Kubernetes secrets.
+        # This tells Tailscale to use the PVC filesystem (/var/lib/tailscale) instead and
+        # avoids requiring RBAC permissions for secrets management.
+        - name: TS_KUBE_SECRET
+          value: ""
+
+        # 2. TS_ROUTES: The local network CIDR(s) you want to advertise to your Tailscale network.
+        #    Replace "192.168.1.0/24" with your home network range.
+        #    This allows you to access any local resource (e.g. your Jellyfin server at 192.168.1.100)
+        #    directly from outside the house.
+        - name: TS_ROUTES
+          value: "192.168.0.0/24"
+
+        # 3. TS_STATE_DIR: Directory where tailscale saves its configuration and keys
+        - name: TS_STATE_DIR
+          value: "/var/lib/tailscale"
+
+        # 4. TS_USERSPACE: Set to "false" to use the kernel tun device for maximum performance and
+        #    efficient packet routing, bypassing user-space overhead.
+        - name: TS_USERSPACE
+          value: "false"
+
+        # 5. TS_EXTRA_ARGS: Extra command line flags for "tailscale up".
+        #    - "--advertise-exit-node" allows you to route all client internet traffic through your
+        #      home network (e.g. to browse securely when on public Wi-Fi).
+        - name: TS_EXTRA_ARGS
+          value: "--advertise-exit-node"
+
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+
+        volumeMounts:
+        # State directory for persistence
+        - name: tailscale-state
+          mountPath: /var/lib/tailscale
+        # Mounting host tun device for kernel network routing
+        - name: dev-net-tun
+          mountPath: /dev/net/tun
+
+      volumes:
+      - name: tailscale-state
+        persistentVolumeClaim:
+          claimName: tailscale-pvc
+      - name: dev-net-tun
+        hostPath:
+          path: /dev/net/tun

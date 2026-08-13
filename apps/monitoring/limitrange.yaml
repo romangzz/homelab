@@ -1,0 +1,21 @@
+# LimitRange only here, deliberately no ResourceQuota. kube-prometheus-stack
+# deploys several Helm-chart-managed components (Prometheus, Grafana,
+# Alertmanager, kube-state-metrics, node-exporter) whose exact combined
+# resource footprint isn't fully known from this repo's thin Application
+# wrapper -- a wrong quota ceiling risks rejecting pods and breaking
+# monitoring itself. This still gives any container that omits
+# resources a sane default without imposing a hard namespace ceiling.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: monitoring-limits
+  namespace: monitoring
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      default:
+        cpu: 500m
+        memory: 512Mi

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omada-controller
+  labels:
+    app: omada-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: omada-controller
+  template:
+    metadata:
+      labels:
+        app: omada-controller
+    spec:
+      hostNetwork: true
+      containers:
+      - name: omada-controller
+        image: mbentley/omada-controller:latest
+        env:
+        - name: TZ
+          value: "Europe/Madrid"
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: "1"
+            memory: 1Gi
+        volumeMounts:
+        - name: omada-storage
+          mountPath: /opt/tplink/EAPController/data
+      volumes:
+      - name: omada-storage
+        persistentVolumeClaim:
+          claimName: omada-data-pvc
