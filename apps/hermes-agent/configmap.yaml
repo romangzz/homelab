@@ -10,7 +10,12 @@ data:
       default: "qwen2.5-coder:14b"
       base_url: "http://ollama-service.ai.svc.cluster.local:11434/v1"
       api_key: "ollama-no-key-needed"
-      context_length: 65536
+      # Matches OLLAMA_CONTEXT_LENGTH in apps/ollama/deployment.yaml. This
+      # was previously set to 65536 but the Ollama server was never
+      # configured to actually serve that much (it defaulted to 4096),
+      # so hermes-agent's compression logic was triggering off a context
+      # size the model was never actually getting.
+      context_length: 32768
     compression:
       enabled: true
       threshold: 0.40

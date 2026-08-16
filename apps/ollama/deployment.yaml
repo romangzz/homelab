@@ -31,6 +31,23 @@ spec:
           value: "1"
         - name: OLLAMA_KEEP_ALIVE
           value: "30m"
+        # Ollama defaults every model to a 4096-token context window, which
+        # is too small for agentic tool-calling (opencode et al recommend
+        # 64k+). Raised to 32768 as the ceiling that comfortably fits a
+        # 14B model (e.g. qwen2.5-coder:14b) alongside flash attention +
+        # q8_0 KV cache on this 16Gi GPU; going to 64k gets tight once
+        # weights + KV cache + compute buffer are accounted for.
+        - name: OLLAMA_CONTEXT_LENGTH
+          value: "32768"
+        # Single-user homelab box: one concurrent request slot means the
+        # full context budget above goes to that slot instead of being
+        # divided across OLLAMA_NUM_PARALLEL's default of 4 slots.
+        - name: OLLAMA_NUM_PARALLEL
+          value: "1"
+        - name: OLLAMA_FLASH_ATTENTION
+          value: "1"
+        - name: OLLAMA_KV_CACHE_TYPE
+          value: "q8_0"
         resources:
           requests:
             cpu: "1"

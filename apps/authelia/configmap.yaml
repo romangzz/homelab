@@ -24,6 +24,16 @@ data:
 
     access_control:
       default_policy: 'one_factor'
+      rules:
+        # Ollama's own API has no auth of its own, so this hands the raw
+        # model endpoint to anyone who can resolve/reach this hostname
+        # (LAN, Tailscale, and the public internet if it's tunneled) --
+        # traded off deliberately so CLI tools (opencode) that can't carry
+        # an Authelia browser session can talk to it without a second,
+        # unauthenticated NodePort. Scoped to just this host so every
+        # other app keeps the one_factor default.
+        - domain: 'ollama.home.romangzz.com'
+          policy: 'bypass'
 
     session:
       name: 'authelia_session'
