@@ -1,0 +1,130 @@
+# Nightly off-node backup of every *arr config PVC via restic, deduplicated
+# and pruned automatically. SUSPENDED by default -- restic needs a
+# repository target (S3, Backblaze B2, SFTP, rest-server, ...) and a
+# password, neither of which exist yet. To enable:
+#   1. Pick a restic backend and create a SealedSecret named
+#      `restic-backup-secret` in the `media` namespace (same pattern as
+#      vpn-secret.yaml / unpackerr-secret.yaml) with at minimum:
+#        RESTIC_REPOSITORY   e.g. s3:https://s3.<region>.backblazeb2.com/<bucket>
+#        RESTIC_PASSWORD     encryption password for the restic repo
+#      plus whatever the backend needs, e.g. for S3/B2:
+#        AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+#   2. Flip `spec.suspend` below to `false`.
+# All config PVCs are mounted read-only here -- this job only ever reads.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: media-config-backup
+spec:
+  schedule: "0 4 * * *" # nightly, 04:00
+  concurrencyPolicy: Forbid
+  suspend: true
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+          containers:
+          - name: restic-backup
+            image: restic/restic:latest
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            command: ["sh", "/scripts/backup.sh"]
+            envFrom:
+            - secretRef:
+                name: restic-backup-secret
+            env:
+            - name: RESTIC_CACHE_DIR
+              value: /tmp/restic-cache
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
+            volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            - name: tmp
+              mountPath: /tmp
+            - name: jellyfin-config
+              mountPath: /backup-source/jellyfin
+              readOnly: true
+            - name: qbittorrent-config
+              mountPath: /backup-source/qbittorrent
+              readOnly: true
+            - name: radarr-config
+              mountPath: /backup-source/radarr
+              readOnly: true
+            - name: sonarr-config
+              mountPath: /backup-source/sonarr
+              readOnly: true
+            - name: prowlarr-config
+              mountPath: /backup-source/prowlarr
+              readOnly: true
+            - name: bazarr-config
+              mountPath: /backup-source/bazarr
+              readOnly: true
+            - name: iso-extractor-config
+              mountPath: /backup-source/iso-extractor
+              readOnly: true
+          volumes:
+          - name: scripts
+            configMap:
+              name: media-config-backup-script
+              defaultMode: 0755
+          - name: tmp
+            emptyDir: {}
+          - name: jellyfin-config
+            persistentVolumeClaim:
+              claimName: jellyfin-config-pvc
+              readOnly: true
+          - name: qbittorrent-config
+            persistentVolumeClaim:
+              claimName: qbittorrent-config-pvc
+              readOnly: true
+          - name: radarr-config
+            persistentVolumeClaim:
+              claimName: radarr-config-pvc
+              readOnly: true
+          - name: sonarr-config
+            persistentVolumeClaim:
+              claimName: sonarr-config-pvc
+              readOnly: true
+          - name: prowlarr-config
+            persistentVolumeClaim:
+              claimName: prowlarr-config-pvc
+              readOnly: true
+          - name: bazarr-config
+            persistentVolumeClaim:
+              claimName: bazarr-config-pvc
+              readOnly: true
+          - name: iso-extractor-config
+            persistentVolumeClaim:
+              claimName: iso-extractor-config-pvc
+              readOnly: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: media-config-backup-script
+data:
+  backup.sh: |
+    #!/bin/sh
+    set -e
+
+    if ! restic snapshots >/dev/null 2>&1; then
+      echo "Restic repository not initialized yet, running restic init..."
+      restic init
+    fi
+
+    restic backup /backup-source --tag media-config
+    restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune

@@ -27,4 +27,5 @@ resources:
   - cleanuparr.yaml
   - ntfy.yaml
   - jellyseerr.yaml
+  - backup-cronjob.yaml
 
