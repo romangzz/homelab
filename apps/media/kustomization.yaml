@@ -26,4 +26,5 @@ resources:
   - recyclarr-cronjob.yaml
   - cleanuparr.yaml
   - ntfy.yaml
+  - jellyseerr.yaml
 
