@@ -25,4 +25,5 @@ resources:
   - recyclarr-secret.yaml
   - recyclarr-cronjob.yaml
   - cleanuparr.yaml
+  - ntfy.yaml
 

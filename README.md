@@ -30,6 +30,7 @@ Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/h
 | Cleanuparr | `media` | `cleanuparr.home.romangzz.com` | Removes stalled/blocked downloads, triggers blocklist + re-search |
 | ISO Extractor | `media` | `iso-extractor.home.romangzz.com` | Rips ISOs to MKV; egress-restricted |
 | Subgen / Whisper | `media` | `{subgen,whisper}.home.romangzz.com` | Local subtitle generation / ASR |
+| ntfy | `media` | `ntfy.home.romangzz.com` | Push notifications for Sonarr/Radarr/Bazarr failures |
 | Open WebUI | `ai` | `chat.home.romangzz.com` | Chat UI for local models |
 | Ollama | `ai` | `ollama.home.romangzz.com` | Local LLM serving (GPU) |
 | Hermes Agent | `ai` | `hermes.home.romangzz.com` | Messaging/cron agent gateway |

@@ -1,0 +1,94 @@
+# Self-hosted push-notification server for Sonarr/Radarr/Bazarr failure
+# alerts (import failures, health issues, etc). Deliberately NOT put
+# behind Authelia's forwardAuth like the other admin UIs: the ntfy phone
+# app talks to the server over raw HTTP/websocket, not a browser session,
+# so it can't complete an Authelia login redirect. It's only reachable via
+# the same private LAN/Tailnet perimeter as everything else in this repo
+# -- if you want it locked down further, use ntfy's own per-topic access
+# control (`ntfy user add` / `ntfy access`) instead of the proxy-level
+# middleware.
+#
+# Nothing subscribes to it yet -- add an "Ntfy" connection in Sonarr's and
+# Radarr's Settings > Connect (server: http://ntfy-service, topic: e.g.
+# "sonarr"/"radarr"), and in Bazarr's Settings > Notifications via its
+# Apprise integration (ntfy://ntfy-service/<topic>).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ntfy
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ntfy
+  template:
+    metadata:
+      labels:
+        app: ntfy
+    spec:
+      containers:
+      - name: ntfy
+        image: binwiederhier/ntfy:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+        command: ["ntfy", "serve"]
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: TZ
+          value: "Europe/Madrid"
+        - name: NTFY_BASE_URL
+          value: "https://ntfy.home.romangzz.com"
+        - name: NTFY_CACHE_FILE
+          value: "/var/cache/ntfy/cache.db"
+        - name: NTFY_BEHIND_PROXY
+          value: "true"
+        resources:
+          limits:
+            memory: 256Mi
+            cpu: 500m
+          requests:
+            memory: 64Mi
+            cpu: 50m
+        volumeMounts:
+        - name: cache
+          mountPath: /var/cache/ntfy
+      volumes:
+      - name: cache
+        persistentVolumeClaim:
+          claimName: ntfy-cache-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ntfy-service
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http
+  selector:
+    app: ntfy
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ntfy-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: ntfy.home.romangzz.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ntfy-service
+            port:
+              number: 80
