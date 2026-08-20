@@ -88,5 +88,30 @@ spec:
   resources:
     requests:
       storage: 1Gi
-
-
+---
+# ASR model caches for whisper/subgen -- without these, both re-download
+# their model from the internet on every pod restart (see the comment in
+# networkpolicy.yaml for why they're excluded from egress restriction).
+# Once a cache PVC has a model in it, egress can be locked down the same
+# way unpackerr/iso-extractor already are.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: whisper-model-cache-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: subgen-model-cache-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

@@ -29,6 +29,10 @@ spec:
           value: "openai_whisper"
         - name: TZ
           value: "Europe/Madrid"
+        # Persists the downloaded model across restarts instead of
+        # re-fetching it from the internet every time.
+        - name: ASR_MODEL_PATH
+          value: "/cache"
         resources:
           limits:
             memory: 2Gi
@@ -36,6 +40,13 @@ spec:
           requests:
             memory: 512Mi
             cpu: 250m
+        volumeMounts:
+        - name: model-cache
+          mountPath: /cache
+      volumes:
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: whisper-model-cache-pvc
 ---
 apiVersion: v1
 kind: Service
