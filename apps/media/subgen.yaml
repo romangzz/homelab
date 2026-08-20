@@ -14,6 +14,13 @@ spec:
       labels:
         app: subgen
     spec:
+      # GPU transcription is available (runtimeClassName: nvidia + set
+      # TRANSCRIBE_DEVICE to "cuda" below) but left off by default: the
+      # node only has one physical GPU and the media namespace's
+      # ResourceQuota only allows requests.nvidia.com/gpu: "1", which
+      # Jellyfin's hardware transcoding already claims. Enabling it here
+      # too would leave one of the two pods permanently unschedulable.
+      # runtimeClassName: nvidia
       containers:
       - name: subgen
         image: mccloud/subgen:latest
@@ -29,13 +36,26 @@ spec:
           value: "cpu"
         - name: TZ
           value: "Europe/Madrid"
+        # Persists the downloaded model across restarts instead of
+        # re-fetching it from the internet every time (HF_HOME is the
+        # standard huggingface_hub cache-location override).
+        - name: HF_HOME
+          value: "/cache"
         resources:
           limits:
             memory: 2Gi
             cpu: "2"
+            # nvidia.com/gpu: 1
           requests:
             memory: 512Mi
             cpu: 250m
+        volumeMounts:
+        - name: model-cache
+          mountPath: /cache
+      volumes:
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: subgen-model-cache-pvc
 ---
 apiVersion: v1
 kind: Service
