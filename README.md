@@ -27,6 +27,7 @@ Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/h
 | qBittorrent | `media` | `qbittorrent.home.romangzz.com` | Torrent client, routed through a VPN sidecar (gluetun) |
 | Radarr / Sonarr / Bazarr / Prowlarr | `media` | `{radarr,sonarr,bazarr,prowlarr}.home.romangzz.com` | Media/subtitle/indexer management |
 | Unpackerr | `media` | — | Extracts completed downloads; egress-restricted (no internet access needed) |
+| Cleanuparr | `media` | `cleanuparr.home.romangzz.com` | Removes stalled/blocked downloads, triggers blocklist + re-search |
 | ISO Extractor | `media` | `iso-extractor.home.romangzz.com` | Rips ISOs to MKV; egress-restricted |
 | Subgen / Whisper | `media` | `{subgen,whisper}.home.romangzz.com` | Local subtitle generation / ASR |
 | Open WebUI | `ai` | `chat.home.romangzz.com` | Chat UI for local models |

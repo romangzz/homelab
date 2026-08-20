@@ -24,4 +24,5 @@ resources:
   - iso-extractor.yaml
   - recyclarr-secret.yaml
   - recyclarr-cronjob.yaml
+  - cleanuparr.yaml
 
