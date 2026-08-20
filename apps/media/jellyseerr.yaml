@@ -1,0 +1,99 @@
+# Self-service request portal: browses trending/popular/upcoming movies
+# and shows (via TMDB) and forwards requests to Radarr/Sonarr. Not wired
+# to anything yet -- after first deploy, its setup wizard needs the
+# Jellyfin server URL/API key (for login + library sync) and the
+# Radarr/Sonarr URLs/API keys, all entered through its own UI, same
+# pattern as Prowlarr's indexers and Cleanuparr's download client.
+#
+# Deliberately NOT put behind Authelia's forwardAuth, unlike most admin
+# UIs in this repo: Jellyseerr is meant to be used by every household
+# member (it has its own login, backed by Jellyfin accounts), not just
+# the Authelia admin user -- same reasoning as why Jellyfin itself skips
+# the middleware.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyseerr
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jellyseerr
+  template:
+    metadata:
+      labels:
+        app: jellyseerr
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - jellyfin
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: jellyseerr
+        image: fallenbagel/jellyseerr:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: 5055
+          name: http
+        env:
+        - name: TZ
+          value: "Europe/Madrid"
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "1"
+          requests:
+            memory: 128Mi
+            cpu: 100m
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+      volumes:
+      - name: config
+        persistentVolumeClaim:
+          claimName: jellyseerr-config-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jellyseerr-service
+spec:
+  ports:
+  - port: 5055
+    targetPort: 5055
+    name: http
+  selector:
+    app: jellyseerr
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jellyseerr-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: jellyseerr.home.romangzz.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: jellyseerr-service
+            port:
+              number: 5055
