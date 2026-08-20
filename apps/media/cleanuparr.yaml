@@ -1,0 +1,106 @@
+# Auto-removes stalled, blocked, or malicious downloads from qBittorrent
+# and triggers Sonarr/Radarr to blocklist + re-search them. Connections to
+# qBittorrent/Sonarr/Radarr aren't set via env vars here -- like
+# Prowlarr's indexers, they're configured once through Cleanuparr's own
+# web UI after first deploy (Settings > download client / *arr apps),
+# pointing at the in-cluster service DNS names (qbittorrent-service:8080,
+# sonarr-service:8989, radarr-service:7878).
+#
+# Image/port are best-effort from upstream docs at the time this was
+# written (ghcr.io/cleanuparr/cleanuparr, port 11011) -- verify against
+# https://cleanuparr.github.io if the pod doesn't come up cleanly.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cleanuparr
+  labels:
+    app: cleanuparr
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: cleanuparr
+  template:
+    metadata:
+      labels:
+        app: cleanuparr
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - jellyfin
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: cleanuparr
+        image: ghcr.io/cleanuparr/cleanuparr:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: 11011
+          name: http
+        env:
+        - name: TZ
+          value: "Europe/Madrid"
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "1"
+          requests:
+            memory: 128Mi
+            cpu: 100m
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: media
+          mountPath: /data
+      volumes:
+      - name: config
+        persistentVolumeClaim:
+          claimName: cleanuparr-config-pvc
+      - name: media
+        persistentVolumeClaim:
+          claimName: media-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cleanuparr-service
+spec:
+  ports:
+  - port: 11011
+    targetPort: 11011
+    name: http
+  selector:
+    app: cleanuparr
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cleanuparr-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+    traefik.ingress.kubernetes.io/router.middlewares: auth-authelia-forwardauth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: cleanuparr.home.romangzz.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cleanuparr-service
+            port:
+              number: 11011
