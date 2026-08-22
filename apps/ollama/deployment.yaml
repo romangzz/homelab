@@ -55,7 +55,17 @@ spec:
           limits:
             cpu: "4"
             memory: 16Gi
-            nvidia.com/gpu: 1
+            # One of each named GPU resource (see nvidia-device-plugin's
+            # configmap) rather than the generic nvidia.com/gpu pool, so
+            # this deterministically gets both physical cards -- letting
+            # Ollama split a model across both when it doesn't fit in a
+            # single 16Gi card. Note: the RTX 5060 Ti (Blackwell) and RTX
+            # 4060 Ti (Ada) have different compute capability, so a split
+            # model runs at the slower card's pace for any cross-GPU
+            # synchronization -- worse per-token throughput than either
+            # card alone for models that *do* fit in 16Gi.
+            nvidia.com/gpu-5060ti: 1
+            nvidia.com/gpu-4060ti: 1
         volumeMounts:
         - name: ollama-data
           mountPath: /root/.ollama

@@ -9,7 +9,8 @@ spec:
     requests.memory: 10Gi
     limits.cpu: "10"
     limits.memory: 24Gi
-    requests.nvidia.com/gpu: "1"
+    requests.nvidia.com/gpu-5060ti: "1"
+    requests.nvidia.com/gpu-4060ti: "1"
     pods: "20"
 ---
 apiVersion: v1

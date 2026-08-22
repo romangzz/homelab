@@ -6,8 +6,28 @@ metadata:
 data:
   sharing-config: |
     version: v1
+    # Both cards get their own resource name instead of sharing the
+    # time-sliced nvidia.com/gpu pool. Ollama requests one of each by name
+    # (see apps/ollama/deployment.yaml) so it deterministically gets
+    # exactly one RTX 5060 Ti *and* one RTX 4060 Ti to split large models
+    # across -- requesting `nvidia.com/gpu: 2` from a time-sliced pool
+    # would not guarantee two distinct physical cards, since replicas of
+    # the same GPU share its real UUID and the allocator is not
+    # topology-aware. Any future GPU that doesn't match either pattern
+    # falls back to the generic, still-time-sliced nvidia.com/gpu name.
+    resources:
+      gpus:
+      - pattern: "*5060 Ti*"
+        name: nvidia.com/gpu-5060ti
+      - pattern: "*4060 Ti*"
+        name: nvidia.com/gpu-4060ti
+      - pattern: "*"
+        name: nvidia.com/gpu
     sharing:
       timeSlicing:
         resources:
         - name: nvidia.com/gpu
           replicas: 10
+        # nvidia.com/gpu-5060ti and nvidia.com/gpu-4060ti have no entry
+        # here: unlisted resources are not time-sliced, so each maps 1:1
+        # to its whole physical card.
