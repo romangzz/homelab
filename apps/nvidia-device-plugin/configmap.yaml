@@ -6,28 +6,16 @@ metadata:
 data:
   sharing-config: |
     version: v1
-    # Both cards get their own resource name instead of sharing the
-    # time-sliced nvidia.com/gpu pool. Ollama requests one of each by name
-    # (see apps/ollama/deployment.yaml) so it deterministically gets
-    # exactly one RTX 5060 Ti *and* one RTX 4060 Ti to split large models
-    # across -- requesting `nvidia.com/gpu: 2` from a time-sliced pool
-    # would not guarantee two distinct physical cards, since replicas of
-    # the same GPU share its real UUID and the allocator is not
-    # topology-aware. Any future GPU that doesn't match either pattern
-    # falls back to the generic, still-time-sliced nvidia.com/gpu name.
-    resources:
-      gpus:
-      - pattern: "*5060 Ti*"
-        name: nvidia.com/gpu-5060ti
-      - pattern: "*4060 Ti*"
-        name: nvidia.com/gpu-4060ti
-      - pattern: "*"
-        name: nvidia.com/gpu
-    sharing:
-      timeSlicing:
-        resources:
-        - name: nvidia.com/gpu
-          replicas: 10
-        # nvidia.com/gpu-5060ti and nvidia.com/gpu-4060ti have no entry
-        # here: unlisted resources are not time-sliced, so each maps 1:1
-        # to its whole physical card.
+    # No time-slicing: this plugin build (v0.19.3) also hard-disables
+    # per-GPU resource renaming on every start (calls
+    # DisableResourceNamingInConfig, which wipes config.Resources and logs
+    # "Customizing the 'resources' field is not yet supported... Ignoring"),
+    # so there is no supported way to give the two physical cards distinct
+    # resource names here. With time-slicing off, nvidia.com/gpu has
+    # capacity exactly 2 -- one unit per physical GPU, no replicated/
+    # duplicate-UUID slices -- so a pod requesting nvidia.com/gpu: 2 is
+    # necessarily handed both distinct cards; that's how Ollama gets
+    # guaranteed access to both GPUs to split a model across (see
+    # apps/ollama/deployment.yaml). Time-slicing replicas previously set
+    # here (10x) had no active consumer anyway -- Jellyfin/subgen's GPU
+    # use is currently disabled/CPU-only.
