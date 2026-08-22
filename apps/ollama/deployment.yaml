@@ -20,7 +20,7 @@ spec:
       - operator: "Exists"
       containers:
       - name: ollama
-        image: ollama/ollama:0.32.10
+        image: ollama/ollama:0.32.15
         ports:
         - containerPort: 11434
           name: api
