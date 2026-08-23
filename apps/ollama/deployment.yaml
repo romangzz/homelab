@@ -33,12 +33,14 @@ spec:
           value: "30m"
         # Ollama defaults every model to a 4096-token context window, which
         # is too small for agentic tool-calling (opencode et al recommend
-        # 64k+). Raised to 32768 as the ceiling that comfortably fits a
-        # 14B model (e.g. qwen2.5-coder:14b) alongside flash attention +
-        # q8_0 KV cache on this 16Gi GPU; going to 64k gets tight once
-        # weights + KV cache + compute buffer are accounted for.
+        # 64k+). Was capped at 32768 when the box only had one 16Gi GPU;
+        # now that the coding-tier models (qwen3.8, north-mini-code-1.0,
+        # etc.) span both GPUs (~31Gi combined), 65536 fits comfortably on
+        # everything except nemotron-3.5-lightning, which is closest to
+        # its VRAM ceiling -- don't raise this further without rechecking
+        # headroom on that one specifically.
         - name: OLLAMA_CONTEXT_LENGTH
-          value: "32768"
+          value: "65536"
         # Single-user homelab box: one concurrent request slot means the
         # full context budget above goes to that slot instead of being
         # divided across OLLAMA_NUM_PARALLEL's default of 4 slots.
