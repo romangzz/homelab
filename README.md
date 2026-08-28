@@ -24,7 +24,7 @@ Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/h
 | App | Namespace | Host | Notes |
 |---|---|---|---|
 | Jellyfin | `media` | `jellyfin.home.romangzz.com` | Media server |
-| Jellyseerr | `media` | `jellyseerr.home.romangzz.com` | Request portal for trending/popular content, feeds Radarr/Sonarr |
+| Seerr | `media` | `seerr.home.romangzz.com` | Request portal for trending/popular content, feeds Radarr/Sonarr |
 | qBittorrent | `media` | `qbittorrent.home.romangzz.com` | Torrent client, routed through a VPN sidecar (gluetun) |
 | Radarr / Sonarr / Bazarr / Prowlarr | `media` | `{radarr,sonarr,bazarr,prowlarr}.home.romangzz.com` | Media/subtitle/indexer management |
 | Unpackerr | `media` | — | Extracts completed downloads; egress-restricted (no internet access needed) |

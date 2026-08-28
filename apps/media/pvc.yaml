@@ -138,6 +138,10 @@ spec:
     requests:
       storage: 2Gi
 ---
+# Name kept as "jellyseerr" even though the app it backs is now Seerr
+# (see seerr.yaml) -- Seerr auto-migrates the existing Jellyseerr DB
+# from this same PVC on first boot, so renaming the claim would mean a
+# manual data copy for no benefit.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
