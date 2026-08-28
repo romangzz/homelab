@@ -477,7 +477,7 @@ data:
           config.torznab = torznabUrls;
           config.action = "inject";
           config.torrentClients = [
-            `qbittorrent:http://${process.env.QBIT_USERNAME}:${process.env.QBIT_PASSWORD}@127.0.0.1:8080`
+            `qbittorrent:http://${encodeURIComponent(process.env.QBIT_USERNAME)}:${encodeURIComponent(process.env.QBIT_PASSWORD)}@127.0.0.1:8080`
           ];
           config.qbittorrentUrl = undefined;
           config.torrentDir = null;
