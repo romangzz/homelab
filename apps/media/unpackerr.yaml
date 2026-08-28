@@ -42,6 +42,18 @@ spec:
           value: "/data/torrents"
         - name: UN_SONARR_0_DELETE_DELAY
           value: "5m"
+        # Sonarr UHD configuration
+        - name: UN_SONARR_1_URL
+          value: "http://sonarr-uhd-service:8989"
+        - name: UN_SONARR_1_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: unpackerr-secret
+              key: SONARR_UHD_API_KEY
+        - name: UN_SONARR_1_PATHS_0
+          value: "/data/torrents"
+        - name: UN_SONARR_1_DELETE_DELAY
+          value: "5m"
         # Radarr configuration
         - name: UN_RADARR_0_URL
           value: "http://radarr-service:7878"
@@ -53,6 +65,18 @@ spec:
         - name: UN_RADARR_0_PATHS_0
           value: "/data/torrents"
         - name: UN_RADARR_0_DELETE_DELAY
+          value: "5m"
+        # Radarr UHD configuration
+        - name: UN_RADARR_1_URL
+          value: "http://radarr-uhd-service:7878"
+        - name: UN_RADARR_1_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: unpackerr-secret
+              key: RADARR_UHD_API_KEY
+        - name: UN_RADARR_1_PATHS_0
+          value: "/data/torrents"
+        - name: UN_RADARR_1_DELETE_DELAY
           value: "5m"
         resources:
           limits:

@@ -13,7 +13,9 @@ resources:
   - jellyfin.yaml
   - qbittorrent.yaml
   - radarr.yaml
+  - radarr-uhd.yaml
   - sonarr.yaml
+  - sonarr-uhd.yaml
   - prowlarr.yaml
   - flaresolverr.yaml
   - bazarr.yaml

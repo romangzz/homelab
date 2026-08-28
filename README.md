@@ -26,7 +26,8 @@ Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/h
 | Jellyfin | `media` | `jellyfin.home.romangzz.com` | Media server |
 | Seerr | `media` | `seerr.home.romangzz.com` | Request portal for trending/popular content, feeds Radarr/Sonarr |
 | qBittorrent | `media` | `qbittorrent.home.romangzz.com` | Torrent client, routed through a VPN sidecar (gluetun) |
-| Radarr / Sonarr / Bazarr / Prowlarr | `media` | `{radarr,sonarr,bazarr,prowlarr}.home.romangzz.com` | Media/subtitle/indexer management |
+| Radarr / Sonarr / Bazarr / Prowlarr | `media` | `{radarr,sonarr,bazarr,prowlarr}.home.romangzz.com` | Media/subtitle/indexer management (radarr/sonarr manage the FHD/1080p tier) |
+| Radarr UHD / Sonarr UHD | `media` | `{radarr-uhd,sonarr-uhd}.home.romangzz.com` | Second instances for the UHD quality tier; own root folders (`movies-uhd`/`tv-uhd`), same media-pvc |
 | Unpackerr | `media` | — | Extracts completed downloads; egress-restricted (no internet access needed) |
 | Cleanuparr | `media` | `cleanuparr.home.romangzz.com` | Removes stalled/blocked downloads, triggers blocklist + re-search |
 | ISO Extractor | `media` | `iso-extractor.home.romangzz.com` | Rips ISOs to MKV; egress-restricted |

@@ -1,0 +1,99 @@
+# Second Sonarr instance for the UHD quality tier -- runs alongside the
+# original `sonarr` (now the FHD/1080p tier). Same media-pvc, but its root
+# folder (set once through its own UI, like all root folders in this
+# stack) should point at /data/media/tv-uhd, a sibling of the existing
+# /data/media/tv tree, so the two instances never touch each other's
+# files.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarr-uhd
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: sonarr-uhd
+  template:
+    metadata:
+      labels:
+        app: sonarr-uhd
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - jellyfin
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: sonarr-uhd
+        image: lscr.io/linuxserver/sonarr:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: 8989
+          name: http
+        env:
+        - name: PUID
+          value: "1000"
+        - name: PGID
+          value: "1000"
+        - name: TZ
+          value: "Europe/Madrid"
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: "1"
+          requests:
+            memory: 256Mi
+            cpu: 100m
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: media
+          mountPath: /data
+      volumes:
+      - name: config
+        persistentVolumeClaim:
+          claimName: sonarr-uhd-config-pvc
+      - name: media
+        persistentVolumeClaim:
+          claimName: media-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarr-uhd-service
+spec:
+  ports:
+  - port: 8989
+    targetPort: 8989
+    name: http
+  selector:
+    app: sonarr-uhd
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sonarr-uhd-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+    traefik.ingress.kubernetes.io/router.middlewares: auth-authelia-forwardauth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: sonarr-uhd.home.romangzz.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sonarr-uhd-service
+            port:
+              number: 8989

@@ -64,8 +64,14 @@ spec:
             - name: radarr-config
               mountPath: /backup-source/radarr
               readOnly: true
+            - name: radarr-uhd-config
+              mountPath: /backup-source/radarr-uhd
+              readOnly: true
             - name: sonarr-config
               mountPath: /backup-source/sonarr
+              readOnly: true
+            - name: sonarr-uhd-config
+              mountPath: /backup-source/sonarr-uhd
               readOnly: true
             - name: prowlarr-config
               mountPath: /backup-source/prowlarr
@@ -75,6 +81,12 @@ spec:
               readOnly: true
             - name: iso-extractor-config
               mountPath: /backup-source/iso-extractor
+              readOnly: true
+            - name: seerr-config
+              mountPath: /backup-source/seerr
+              readOnly: true
+            - name: cleanuparr-config
+              mountPath: /backup-source/cleanuparr
               readOnly: true
           volumes:
           - name: scripts
@@ -95,9 +107,17 @@ spec:
             persistentVolumeClaim:
               claimName: radarr-config-pvc
               readOnly: true
+          - name: radarr-uhd-config
+            persistentVolumeClaim:
+              claimName: radarr-uhd-config-pvc
+              readOnly: true
           - name: sonarr-config
             persistentVolumeClaim:
               claimName: sonarr-config-pvc
+              readOnly: true
+          - name: sonarr-uhd-config
+            persistentVolumeClaim:
+              claimName: sonarr-uhd-config-pvc
               readOnly: true
           - name: prowlarr-config
             persistentVolumeClaim:
@@ -110,6 +130,14 @@ spec:
           - name: iso-extractor-config
             persistentVolumeClaim:
               claimName: iso-extractor-config-pvc
+              readOnly: true
+          - name: seerr-config
+            persistentVolumeClaim:
+              claimName: jellyseerr-config-pvc
+              readOnly: true
+          - name: cleanuparr-config
+            persistentVolumeClaim:
+              claimName: cleanuparr-config-pvc
               readOnly: true
 ---
 apiVersion: v1

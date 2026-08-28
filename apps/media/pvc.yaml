@@ -48,7 +48,29 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
+  name: radarr-uhd-config-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
   name: sonarr-config-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarr-uhd-config-pvc
 spec:
   accessModes:
     - ReadWriteOnce
