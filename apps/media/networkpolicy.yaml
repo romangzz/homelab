@@ -1,12 +1,18 @@
 # Egress restrictions for the media apps confirmed to have no runtime
 # internet dependency -- they only process files already on disk, or talk
 # to other apps within this namespace. NOT applied to jellyfin, radarr,
-# sonarr, bazarr, prowlarr, flaresolverr, or qbittorrent (real outbound
-# needs: metadata/subtitle providers, indexers, VPN tunnel), and NOT
-# applied to subgen/whisper either -- both download ASR models from the
-# internet at startup with no persistent cache, so restricting them broke
-# whisper immediately (CrashLoopBackOff, "Network is unreachable" trying
-# to fetch its model) and would very likely do the same to subgen.
+# radarr-uhd, sonarr, sonarr-uhd, bazarr, prowlarr, flaresolverr, or
+# qbittorrent (real outbound needs: metadata/subtitle providers, indexers,
+# VPN tunnel), and NOT applied to subgen/whisper either -- both download
+# ASR models from the internet at startup with no persistent cache, so
+# restricting them broke whisper immediately (CrashLoopBackOff, "Network
+# is unreachable" trying to fetch its model) and would very likely do the
+# same to subgen.
+#
+# unpackerr needs egress to both the FHD and UHD instances of
+# sonarr/radarr (apps/media/unpackerr.yaml talks to all four) -- missing
+# the UHD rules here silently connection-refused unpackerr's polling of
+# sonarr-uhd/radarr-uhd every UN_INTERVAL.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -37,7 +43,21 @@ spec:
     - to:
         - podSelector:
             matchLabels:
+              app: sonarr-uhd
+      ports:
+        - protocol: TCP
+          port: 8989
+    - to:
+        - podSelector:
+            matchLabels:
               app: radarr
+      ports:
+        - protocol: TCP
+          port: 7878
+    - to:
+        - podSelector:
+            matchLabels:
+              app: radarr-uhd
       ports:
         - protocol: TCP
           port: 7878
