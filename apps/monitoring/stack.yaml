@@ -31,9 +31,9 @@ spec:
 
         prometheus:
           prometheusSpec:
-            podMonitorSelectorNilUsesHelixValues: false
-            serviceMonitorSelectorNilUsesHelixValues: false
-            ruleSelectorNilUsesHelixValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+            serviceMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
             storageSpec:
               volumeClaimTemplate:
                 spec:
