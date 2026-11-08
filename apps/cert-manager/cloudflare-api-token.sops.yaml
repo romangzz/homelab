@@ -1,0 +1,29 @@
+apiVersion: isindir.github.com/v1alpha3
+kind: SopsSecret
+metadata:
+  name: cloudflare-api-token
+  namespace: cert-manager
+spec:
+  # Take over the Secret currently owned by its SealedSecret, so the
+  # migration never deletes it (docs/secrets-migration.md, Phase 5).
+  enforceOwnership: true
+  secretTemplates:
+    - name: cloudflare-api-token
+      type: Opaque
+      data:
+        api-token: ENC[AES256_GCM,data:AtWmzvjJJCfYUHwOu20RIzfxhW4EaUHrTzOIdNZ4kIfiB35E7AbkMFYu0PWCSbVzK2eG+qaBL+whq7Ld4kExdPnPRssiSOTt,iv:+FpBs4pgc28fuCXU5tDrcbgxC688PUQqS91db2hqtaw=,tag:xFZcjiccTX9yTwl6/Tnx6g==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBrK25xQ0owc1BoaUJRakR4
+        YnRGbkNrcXJRMG1YWXZmSm16OFIvRkhOcEhFCnB0M1pYNU1teUlqcnFIWnVyZDN4
+        dFNVTUJ1d0t4a014cDRIS25ENlFsTlkKLS0tIEhZK3pNekgvUFluV1VHY0lTQXIw
+        VzgwSDZwclFFeTVZTHkxSTlHTythZWMKMLX4ztlJIYa6ptQK/ysQWE/vpNRVRhEy
+        e5SFps5jSGbX5YH4ltqSmcEKSd02pwiFXZ3g7GZ7UbLIzwgyW3lXNQ==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1uw5cvgnadjsexe33cqdpz8ka59at6nvxg8pv696z5tqk6a7kpcpqlry79w
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-11-08T14:24:41Z"
+  mac: ENC[AES256_GCM,data:eXuG+C/zqg4eQxcNg63f8aXYlvL6sLKdkEvcOA5KEi24SxyhA87JG+sOvsw3pEEyAfvaOPXQUm7Ep1RQ/6G3wkjjtBayZRkgSW0xBVBxmFIxJS+rTjzIrZM+4JwHa7fJuPs7iTT+OHq45aDBojEKtjiXiUDx+JQJ2QAD0G2Xggc=,iv:7YH9pus83+Agfwk3fjcaDdwDzHdeM2Xt0YCSmt4Ik+Y=,tag:oAeyjUZzcxf7hYVzTfk53A==,type:str]
+  version: 3.13.3
