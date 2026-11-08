@@ -18,5 +18,6 @@ resources:
   - media.yaml
   - n8n.yaml
   - tailscale.yaml
+  - plane.yaml
 
 

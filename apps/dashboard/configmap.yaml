@@ -97,6 +97,11 @@ data:
             href: https://hermes.home.romangzz.com
             description: Messaging & cron agent gateway
             siteMonitor: https://hermes.home.romangzz.com
+        - Plane:
+            icon: mdi-view-dashboard-edit-outline
+            href: https://plane.home.romangzz.com
+            description: Task planner for agent sprints
+            siteMonitor: https://plane.home.romangzz.com
 
     - Infrastructure:
         - ArgoCD:

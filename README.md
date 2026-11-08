@@ -36,6 +36,7 @@ Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/h
 | Open WebUI | `ai` | `chat.home.romangzz.com` | Chat UI for local models |
 | Ollama | `ai` | `ollama.home.romangzz.com` | Local LLM serving (GPU) |
 | Hermes Agent | `ai` | `hermes.home.romangzz.com` | Messaging/cron agent gateway |
+| Plane | `plane` | `plane.home.romangzz.com` | Task planner (PRD/architecture pages, sprints) for the [autonomous agent process](docs/agent-process.md) |
 | ArgoCD | `argocd` | `argo.home.romangzz.com` | GitOps |
 | Grafana / Loki / Alloy | `monitoring` | `grafana.home.romangzz.com` | Metrics + logs (kube-prometheus-stack + Loki) |
 | Omada Controller | `omada` | `omada.home.romangzz.com` | Network/AP management |

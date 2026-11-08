@@ -1,0 +1,87 @@
+# Plane (Community Edition): self-hosted task planner for the autonomous
+# agent workflow (docs/agent-process.md). Two sources:
+#   1. the upstream plane-ce Helm chart (workloads + bundled datastores)
+#   2. apps/plane/ in this repo (namespace, quota, Authelia ingress, and the
+#      SealedSecrets that replace every one of the chart's public defaults)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: plane
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://helm.plane.so/
+      chart: plane-ce
+      targetRevision: 1.8.6
+      helm:
+        releaseName: plane
+        values: |
+          # The chart's own ingress renders a Traefik IngressRoute with no way
+          # to attach extra middlewares, so Authelia can't sit in front of it.
+          # Disabled; apps/plane/ingress.yaml routes the same paths instead.
+          # appHost is still required: it drives WEB_URL and CORS origins.
+          ingress:
+            enabled: false
+            appHost: plane.home.romangzz.com
+          ssl:
+            # TLS terminates at Traefik's websecure entrypoint with the
+            # cluster-wide wildcard cert, so WEB_URL must be https://.
+            externalTermination: true
+
+          env:
+            # Fail the render rather than silently fall back to the chart's
+            # PUBLIC example SECRET_KEY / LIVE_SERVER_SECRET_KEY.
+            requireExplicitSecrets: true
+            docstore_bucket: uploads
+
+          # Every credential comes from apps/plane/sealed-secrets.yaml.
+          external_secrets:
+            app_keys_existingSecret: plane-app-keys
+            pgdb_existingSecret: plane-pgdb
+            rabbitmq_existingSecret: plane-rabbitmq
+            doc_store_existingSecret: plane-doc-store
+            app_env_existingSecret: plane-app-env
+            live_env_existingSecret: plane-live-env
+
+          postgres:
+            storageClass: local-path
+            volumeSize: 5Gi
+          redis:
+            storageClass: local-path
+          rabbitmq:
+            storageClass: local-path
+          minio:
+            storageClass: local-path
+            volumeSize: 5Gi
+    - repoURL: 'https://github.com/romangzz/homelab'
+      targetRevision: main
+      path: apps/plane
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: plane
+  # The chart stamps `timestamp: {{ now }}` into every pod template, so each
+  # re-render (any new commit to this repo, since the git source is part of
+  # the same Application) would roll every Plane pod, and would try to mutate
+  # the immutable migrator Job (plane-api-migrate-1) and fail the sync.
+  # RespectIgnoreDifferences makes ArgoCD keep the live values on apply.
+  # Consequence: on a chart/Plane upgrade the migrator Job is NOT recreated
+  # automatically; delete it (`kubectl -n plane delete job plane-api-migrate-1`)
+  # and ArgoCD re-creates it with the new image to run migrations. Renovate
+  # PRs for plane-ce carry this reminder (renovate.json).
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/metadata/annotations/timestamp
+    - group: batch
+      kind: Job
+      jsonPointers:
+        - /spec
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true

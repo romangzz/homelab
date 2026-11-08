@@ -20,6 +20,13 @@
       "matchManagers": ["argocd"],
       "commitMessagePrefix": "chore(deps):",
       "addLabels": ["helm"]
+    },
+    {
+      "matchManagers": ["argocd"],
+      "matchPackageNames": ["plane-ce"],
+      "prBodyNotes": [
+        "After merging: run `kubectl -n plane delete job plane-api-migrate-1` so ArgoCD recreates the migrator Job with the new image (see the ignoreDifferences comment in apps/argocd-apps/plane.yaml)."
+      ]
     }
   ]
 }
