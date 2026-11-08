@@ -5,8 +5,6 @@ resources:
   - namespace.yaml
   - resourcequota.yaml
   - configmap.yaml
-  - secret-users.yaml
-  - secret-authelia.yaml
   - authelia-secrets.sops.yaml
   - authelia-users.sops.yaml
   - pvc.yaml
