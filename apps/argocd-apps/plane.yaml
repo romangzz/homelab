@@ -57,6 +57,13 @@ spec:
           minio:
             storageClass: local-path
             volumeSize: 5Gi
+
+          # Plane starts Celery as `celery -A plane worker` with no
+          # --concurrency, so it forks one process per node CPU (20 here).
+          # 20 Django processes OOM at the chart's 1000Mi default, and the
+          # chart exposes no env/args for the worker to cap concurrency.
+          worker:
+            memoryLimit: 3Gi
     - repoURL: 'https://github.com/romangzz/homelab'
       targetRevision: main
       path: apps/plane
