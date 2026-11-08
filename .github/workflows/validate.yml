@@ -16,15 +16,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Tool downloads come from GitHub release assets, which intermittently
+      # return 504s. -f makes an HTTP error fail here (instead of saving the
+      # error page and failing later in tar with "not in gzip format"), and
+      # --retry-all-errors retries those 5xx responses. Same flags on every
+      # install step below.
       - name: Install kustomize
         run: |
-          curl -sLo kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
           tar -xzf kustomize.tar.gz
           sudo mv kustomize /usr/local/bin/kustomize
 
       - name: Install kubeconform
         run: |
-          curl -sLo kubeconform.tar.gz "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o kubeconform.tar.gz "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
           tar -xzf kubeconform.tar.gz
           sudo mv kubeconform /usr/local/bin/kubeconform
 
@@ -81,7 +86,7 @@ jobs:
         env:
           GITLEAKS_VERSION: 8.30.1
         run: |
-          curl -sLo gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           tar -xzf gitleaks.tar.gz gitleaks
           sudo mv gitleaks /usr/local/bin/gitleaks
 
