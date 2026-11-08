@@ -1,0 +1,52 @@
+# GPU availability alerts.
+#
+# The NVIDIA kernel module comes from prebuilt Ubuntu packages
+# (linux-modules-nvidia-595-open-<kver>), not DKMS. A kernel update that lands
+# without the matching module package leaves the host without a driver: the
+# device plugin fails to start ("failed to initialize NVML: Driver Not
+# Loaded"), the node advertises nvidia.com/gpu: 0 and Ollama -- which
+# requests both cards (apps/ollama/deployment.yaml) -- sits Pending.
+#
+# Notes:
+# - Prometheus only loads rules labelled release: kube-prometheus-stack
+#   (the chart's default ruleSelector).
+# - max by (node) collapses duplicate series that kube-state-metrics leaves
+#   behind for a short while after it restarts with a new pod IP.
+# - The threshold is 2, not 1: losing one card already breaks Ollama.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: gpu-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: gpu
+      rules:
+        - alert: GPUCapacityLost
+          expr: max by (node) (kube_node_status_allocatable{resource="nvidia_com_gpu"}) < 2
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node {{ $labels.node }} advertises {{ $value }} of 2 GPUs"
+            description: >-
+              nvidia.com/gpu allocatable on {{ $labels.node }} has been below 2
+              for 10m; GPU workloads (Ollama) cannot schedule. Check `nvidia-smi`
+              on the host first: if the driver is not loaded, compare `uname -r`
+              with `dpkg -l | grep linux-modules-nvidia` and install the module
+              package for the running kernel.
+
+        - alert: GPUResourceMissing
+          expr: absent(kube_node_status_allocatable{resource="nvidia_com_gpu"})
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: "No node advertises the nvidia.com/gpu resource"
+            description: >-
+              kube-state-metrics reports no nvidia.com/gpu allocatable on any
+              node, so the NVIDIA device plugin has never registered (or
+              kube-state-metrics is down). Check the nvidia-device-plugin
+              DaemonSet in kube-system.

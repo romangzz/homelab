@@ -7,4 +7,5 @@ resources:
   - loki.yaml
   - alloy.yaml
   - dashboard-loki-app-logs.yaml
+  - gpu-alerts.yaml
   - node-sysctl-tuner.yaml
