@@ -9,3 +9,4 @@ resources:
   - service.yaml
   - ingress.yaml
   - cloudflared.yaml
+  - cloudflare-tunnel-token.sops.yaml

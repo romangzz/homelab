@@ -29,6 +29,12 @@ decrypts it), so ArgoCD itself is untouched.
   Blocked for a while by a node AppArmor bug unrelated to secrets (see
   "Phase 4 incident" below)
 - [ ] **Phase 5**: migrate existing SealedSecrets to SOPS
+  - [x] Batch 1 (2026-11-08): `open-webui-secret`, `unpackerr-secret`,
+    `recyclarr-config`. Taken over in place (same objects, same data
+    digests), SealedSecrets pruned, apps Healthy throughout
+  - [ ] Batch 2: `vpn-secret`, `tailscale-auth`, `cloudflare-tunnel-token`
+  - [ ] Batch 3: `cloudflare-api-token` (cert-manager)
+  - [ ] Batch 4: `authelia-secrets`, `authelia-users`
 - [ ] **Phase 6**: decommission Sealed Secrets
 
 ## Phase 1: Tooling (no cluster changes)
@@ -142,7 +148,12 @@ leaves it alone, so the old SealedSecret can be removed without Kubernetes
 garbage-collecting the Secret. The Secret never disappears, so even pods that
 restart mid-cutover are unaffected. Two commits per secret:
 
-1. Add the `*.sops.yaml` (same name/namespace, `enforceOwnership: true`).
+1. Add the `*.sops.yaml` (same name/namespace, `enforceOwnership: true`),
+   generated straight from the live Secret: `kubectl get secret -o json`
+   over SSH → a converter that keeps the exact base64 `data`, type, labels
+   and annotations → `sops -e --filename-override <path> /dev/stdin`.
+   Plaintext never touches disk; check the decrypted file's data digest
+   against the live Secret before committing.
    Verify: the Secret's `ownerReferences` points at the SopsSecret, values
    unchanged.
 2. Remove the SealedSecret. Verify: the Secret still exists, app healthy.

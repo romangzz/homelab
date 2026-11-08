@@ -5,6 +5,7 @@ namespace: tailscale
 resources:
   - namespace.yaml
   - secret.yaml
+  - tailscale-auth.sops.yaml
   - pvc.yaml
   - resourcequota.yaml
   - deployment.yaml
