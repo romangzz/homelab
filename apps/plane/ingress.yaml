@@ -1,0 +1,78 @@
+# Replaces the chart's IngressRoute (disabled in apps/argocd-apps/plane.yaml),
+# which can't be extended with extra middlewares. Paths and backends mirror the
+# chart's "Custom Ingress Routes" table; Traefik orders rules by length, so
+# the specific prefixes win over the `/` catch-all.
+#
+# No Authelia: Plane has its own login, and its public REST API (/api/v1/)
+# authenticates every request with an X-API-Key. The in-cluster agent-worker
+# talks to plane-api.plane.svc directly and never goes through this ingress.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: plane-ingress
+  namespace: plane
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: plane.home.romangzz.com
+    http:
+      paths:
+      - path: /spaces
+        pathType: Prefix
+        backend:
+          service:
+            name: plane-space
+            port:
+              number: 3000
+      - path: /god-mode
+        pathType: Prefix
+        backend:
+          service:
+            name: plane-admin
+            port:
+              number: 3000
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: plane-api
+            port:
+              number: 8000
+      - path: /auth
+        pathType: Prefix
+        backend:
+          service:
+            name: plane-api
+            port:
+              number: 8000
+      - path: /static
+        pathType: Prefix
+        backend:
+          service:
+            name: plane-api
+            port:
+              number: 8000
+      - path: /live
+        pathType: Prefix
+        backend:
+          service:
+            name: plane-live
+            port:
+              number: 3000
+      # Bundled MinIO serves attachments under the docstore bucket name.
+      - path: /uploads
+        pathType: Prefix
+        backend:
+          service:
+            name: plane-minio
+            port:
+              number: 9000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: plane-web
+            port:
+              number: 3000
