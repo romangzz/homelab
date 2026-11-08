@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - sealed-secrets.yaml
+  - sops-secrets-operator.yaml
   - cert-manager.yaml
   - cert-manager-config.yaml
   - authelia.yaml

@@ -44,12 +44,19 @@ Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/h
 | n8n | `n8n` | `n8n.home.romangzz.com` (internal), `n8n.romangzz.com` (public, via Cloudflare Tunnel) | Workflow automation |
 | Authelia | `auth` | `auth.home.romangzz.com` | SSO login portal |
 | Homepage | `dashboard` | `home.romangzz.com` | Single entry point linking everything above |
-| cert-manager, Sealed Secrets, nvidia-device-plugin | `cert-manager`, `kube-system` | — | Cluster infrastructure, no UI |
+| cert-manager, Sealed Secrets, sops-secrets-operator, nvidia-device-plugin | `cert-manager`, `kube-system`, `sops-secrets-operator` | — | Cluster infrastructure, no UI |
 
 ## Prerequisites
 
 - A k3s cluster with ArgoCD installed and bootstrapped to sync from this repo (`clusters/homelab`).
 - The Sealed Secrets controller running in-cluster *before* anything else — its private key is the one thing that can never live in this repo. Back it up somewhere offline the moment it's generated.
+- The **sops age key** loaded into the cluster once, so sops-secrets-operator can decrypt `*.sops.yaml` (see [docs/secrets-migration.md](docs/secrets-migration.md)). The key lives in 1Password (vault *Homelab*, item `homelab-sops-age-key`), never in this repo:
+  ```
+  op document get homelab-sops-age-key --vault Homelab \
+    | ssh <server> '{ sudo k3s kubectl create namespace sops-secrets-operator </dev/null || true; } \
+      && sudo k3s kubectl -n sops-secrets-operator create secret generic sops-age-key --from-file=keys.txt=/dev/stdin'
+  ```
+  This needs passwordless `sudo` on the server (stdin carries the key, so `sudo` can't prompt). Otherwise `ssh` in interactively, run the same two `kubectl` commands, and paste the key (`op document get homelab-sops-age-key --vault Homelab` locally) into the second one, ending with Ctrl-D.
 - `kubeseal` locally, and its public cert cached, to seal any new secret:
   ```
   kubeseal --format yaml --cert <cached-cert.pem> < plaintext-secret.yaml > sealed-secret.yaml
