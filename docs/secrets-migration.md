@@ -35,7 +35,8 @@ decrypts it), so ArgoCD itself is untouched.
   - [x] Batch 2 (2026-11-08): `vpn-secret`, `tailscale-auth`,
     `cloudflare-tunnel-token`. Taken over in place; VPN, Tailscale and the
     Cloudflare tunnel never restarted
-  - [ ] Batch 3: `cloudflare-api-token` (cert-manager)
+  - [x] Batch 3 (2026-11-08): `cloudflare-api-token`. Taken over in place;
+    staging DNS-01 test issued in ~100s before, after step A and after step B
   - [ ] Batch 4: `authelia-secrets`, `authelia-users`
 - [ ] **Phase 6**: decommission Sealed Secrets
 

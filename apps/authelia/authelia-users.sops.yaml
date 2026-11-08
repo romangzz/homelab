@@ -1,0 +1,29 @@
+apiVersion: isindir.github.com/v1alpha3
+kind: SopsSecret
+metadata:
+  name: authelia-users
+  namespace: auth
+spec:
+  # Take over the Secret currently owned by its SealedSecret, so the
+  # migration never deletes it (docs/secrets-migration.md, Phase 5).
+  enforceOwnership: true
+  secretTemplates:
+    - name: authelia-users
+      type: Opaque
+      data:
+        users_database.yml: ENC[AES256_GCM,data:MikoFZRATg5fnll0up5BJnWmO5I8FtAMdMoal8GVSkqIi61oiYiEagKN4lD6OIkieqOsh9xQ9kzyNE0QYBPh9J05ArWP2kOTh0y2ne/FxoH9Wba9jf/cRGnpGEOYOMHzCbci6AwS7FS/UyT9p0Lzgd05DinsrMmJZumLWaYR7g4HehEpZol/bp/dBdrDUnzUlFE+udvw3MSZPRavV1ZFYBAyCJXKAIWf+67X1n1SUAQZcyN3FNbe2AgZJtKdsCY6VYvvQe+MTtdNWIoCmCy2BnVS2ZEJb/dhAa1PPNh6Lh21pZVfVhNAoAmEzViGtdr8nUWgiHy9VuHPFCb9hgkkTnwBedqfAhiUNvlyUoWdSKoMHDHUOABirtBz2g4hMQKUzockZx7+jwGaG/joo45F0ALFOAZKD9VJ+KGe2mNmTm0=,iv:PglMBA+KkkCDwwPkgyvv8ymW32RHIqbstVMLj+ofutE=,tag:Bit8RaUSEpk86t2aPOnhpg==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBaclRGOEZ6THAzcEtwNmQw
+        dG5HNHJTZFR6NVNoc2EvVUZIK2huWWtXU3lrCmRzRUhCaWFianZVcm5sK1BpQVhz
+        S3ZVbUFJa2E1amtTWDczZ1QrNFRVVlkKLS0tIE1FMXVVYzVOdWtRR0NVMWlhRjN6
+        aWRPREl5UE1GejBucHhPL0p3eUVoY2sKBtSsSlbycw9OxW59Up/L0BuPLw5NHPlF
+        q2sL9xqzv1f3HMZFuGqjyfEk4UgUoGN3sh0mJB7IF8kD3qKt14wi7g==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1uw5cvgnadjsexe33cqdpz8ka59at6nvxg8pv696z5tqk6a7kpcpqlry79w
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-11-08T14:40:16Z"
+  mac: ENC[AES256_GCM,data:j3Ai2izKBFp3mwgq3kgrvROe769P47f35wjTeXNgcL4SAu1s88og9neKYPMJPNwHlFZrLBJvopL4WsetA6O9WEjAEtNPHpdg1/lEAPNuM//TsAsGqxIf1dfxAji6g7R3GW48dyT+0CEOc4GieIg2UprMPZGjjE6IaAy+vnvKKyw=,iv:xyLCO9lHyQhLAVLeF7umyher++jr+TmTLvgUNSjbtXs=,tag:g1mFzBM8KXOCiHjtvHhWYQ==,type:str]
+  version: 3.13.3
