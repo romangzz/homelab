@@ -9,8 +9,6 @@ spec:
   routes:
     - match: Host(`argo.home.romangzz.com`)
       kind: Rule
-      middlewares:
-        - name: authelia-forwardauth
       services:
         - name: argocd-server
           port: 443

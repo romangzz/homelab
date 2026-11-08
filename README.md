@@ -17,7 +17,7 @@ flowchart LR
     CM[cert-manager] -->|DNS-01 via Cloudflare| TR
 ```
 
-Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/homelab` → `apps/argocd-apps` → one `Application` per app). Secrets are never plaintext in git — they're `SealedSecret` resources, encrypted client-side with `kubeseal` against the in-cluster controller's public cert, and only that controller can decrypt them. TLS is a single wildcard cert from Let's Encrypt (DNS-01 via Cloudflare), registered as Traefik's default certificate, so every app gets real HTTPS with no per-app cert config. Admin UIs sit behind Authelia via a Traefik `forwardAuth` middleware — one login, enforced at the proxy, not per app.
+Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/homelab` → `apps/argocd-apps` → one `Application` per app). Secrets are never plaintext in git — they're `SealedSecret` resources, encrypted client-side with `kubeseal` against the in-cluster controller's public cert, and only that controller can decrypt them. TLS is a single wildcard cert from Let's Encrypt (DNS-01 via Cloudflare), registered as Traefik's default certificate, so every app gets real HTTPS with no per-app cert config. Apps with no login of their own sit behind Authelia via a Traefik `forwardAuth` middleware, enforced at the proxy. Apps that ship their own login (ArgoCD, Plane, qBittorrent, Omada) are exposed directly and rely on it, so there's no double login.
 
 ## Apps
 
