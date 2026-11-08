@@ -1,0 +1,29 @@
+apiVersion: isindir.github.com/v1alpha3
+kind: SopsSecret
+metadata:
+  name: tailscale-auth
+  namespace: tailscale
+spec:
+  # Take over the Secret currently owned by its SealedSecret, so the
+  # migration never deletes it (docs/secrets-migration.md, Phase 5).
+  enforceOwnership: true
+  secretTemplates:
+    - name: tailscale-auth
+      type: Opaque
+      data:
+        authkey: ENC[AES256_GCM,data:ocQjAqGiLFNpOofYYGEj9J1IssmrpR4Ca7K/UttKx61NIXwNbuuDIU7moW3ju1gHM8aT6BqpBBzxi8+ycq7IKRdGgv75O4yGh4baxMKU0xTFBWbm,iv:JtXyHEvl7PVdoDl88td1Qsrt2xAlsDQivx+dLoyj7P4=,tag:ULYWpxQ2K0HdEWJ+2hx3pQ==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB1Ynl1bHdWMkZhUlZPbzgy
+        UjVzOXFBMUlpYmdhTGd1d21rVlU2K0R0clFnCis5dC9EWXlQWEFLUFNXQS83K1hE
+        RElvdHdsMlVQeTJJdUN6T1FUcjdoRlEKLS0tIGxyb1lWMVpFaDcwbzhEN2hudWNs
+        TjMrNmdnREhuT1hzVjB0YWttc2gwYXMKOLuBQTuryCKjl0GLDMjq5MopQ/ZpwjKs
+        ZbayUxdM7M78r9mU6B132BxsEA6IHw3itKwSo4vtP0gWgTC4OaLhEQ==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1uw5cvgnadjsexe33cqdpz8ka59at6nvxg8pv696z5tqk6a7kpcpqlry79w
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-11-08T14:17:37Z"
+  mac: ENC[AES256_GCM,data:zzw46vlx3QHqX/doyydeqLiDP0m9lB/A8b+c3joRqDvKxl30ctAB1KD3z1eEG/13x5gSxTCkNmoOZ4o85Ep6DJ5cRoJ4lTujGzR2FZYlC9MuS6ruA4nyTEXGUVDx/qQw+TY/WIgctlr06grTjaD9rD/P2YSF97ftDBl6+ojyh8g=,iv:8U+/wfGBPrWLJEDGRbaC5+0/I+2fDrh8ZJ86e40rPMc=,tag:u3UCjpRmtBheV7O0kGnIqA==,type:str]
+  version: 3.13.3

@@ -1,0 +1,29 @@
+apiVersion: isindir.github.com/v1alpha3
+kind: SopsSecret
+metadata:
+  name: cloudflare-tunnel-token
+  namespace: n8n
+spec:
+  # Take over the Secret currently owned by its SealedSecret, so the
+  # migration never deletes it (docs/secrets-migration.md, Phase 5).
+  enforceOwnership: true
+  secretTemplates:
+    - name: cloudflare-tunnel-token
+      type: Opaque
+      data:
+        tunnel-token: ENC[AES256_GCM,data:snSjVwUbwXtU7EtdJDEcVgd8GwaoOnHYTJYb2JUtGz6y6B3LvyLl6gwN2nkPd7LjHBS/ssUW0cRIcq9SdJHZ7JUOt84oF7YMNxPUdMdNP4/0z7k3QVRFDLbQDt2qWkOjhx1TePwAfzC1TPEa+yExkdusvuoRPPTLXF6MNLyGttEx1pFytsEW7Arj3lKvOc+9PoOjaupIRHL81lRk2hgX3ORkcgmqhaQHINNoc92xd5yjJCHLG994xUlyZ6nTEvWDlgBdRMWonwvxkoFTPDaep6nZmBFq6b2kSErMb0llIk0FnQevxgvZqh2leTxFHUNRd0eGwZdpqUo=,iv:vlqm7mtbRbsv9HAZAN0+sp9r42OV9NvivF7Yh/3/7No=,tag:syHEwwNR38bGbDEQpXRj2Q==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSAycExLbXZ6TkRBTlBZOUlt
+        K2N4anZyNi83NXlxVGl1TzUwV010UUtraDB3CjluNSs1RE9zTE0zZ0lQOWtZYUdZ
+        YXgrczRCME9YNDJlYm52QTMreEREdUEKLS0tIEpDblBCc2hxV3h5emFvbHRLclVC
+        M010b3EzajBuR1c0d1ZWMjJDZG8rd1UKVVfoqn1C9uGkb59iwDTonVJERvQOK+KC
+        k2B3sKtblTAxwFLrhAryMSF7tCaUP78u/Fbt6cEVrXlXXcDoKlE9SA==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1uw5cvgnadjsexe33cqdpz8ka59at6nvxg8pv696z5tqk6a7kpcpqlry79w
+  encrypted_regex: ^(data|stringData)$
+  lastmodified: "2026-11-08T14:17:38Z"
+  mac: ENC[AES256_GCM,data:W7t9uUEIuz+1q5LHhJGMgz05ZfD9tId9qzk/WUvOexYuYE70orUWsv3fR34QgtR6Lyzx/qQESgfexRFl8IgxULEpslCbKZT26OWNx1o+2OifaRxrBGPdrM7FXLqhx/PlyfvzCnT0pb3yshj+Us6utpExsWXBzeh+ootaXP2yD/0=,iv:bkcKX7e6RIQBJMd5xJhGsjnfqn7opp+MAQHgtKBftkA=,tag:64sJETbSoQUkvUZbndoEUg==,type:str]
+  version: 3.13.3

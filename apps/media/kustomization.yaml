@@ -6,6 +6,7 @@ resources:
   - pv.yaml
   - pvc.yaml
   - vpn-secret.yaml
+  - vpn-secret.sops.yaml
   - networkpolicy.yaml
   - resourcequota.yaml
 
