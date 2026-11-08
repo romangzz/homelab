@@ -9,8 +9,6 @@ spec:
   routes:
     - match: Host(`omada.home.romangzz.com`)
       kind: Rule
-      middlewares:
-        - name: authelia-forwardauth
       services:
         - name: omada-internal-service
           port: 8043

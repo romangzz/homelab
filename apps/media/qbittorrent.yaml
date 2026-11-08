@@ -273,7 +273,6 @@ metadata:
   name: qbittorrent-ingress
   annotations:
     kubernetes.io/ingress.class: "traefik"
-    traefik.ingress.kubernetes.io/router.middlewares: auth-authelia-forwardauth@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:

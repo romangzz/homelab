@@ -9,4 +9,3 @@ resources:
   - deployment.yaml
   - ingress.yaml
   - service.yaml
-  - authelia-middleware.yaml
