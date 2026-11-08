@@ -1,8 +1,9 @@
 # Plane (Community Edition): self-hosted task planner for the autonomous
 # agent workflow (docs/agent-process.md). Two sources:
 #   1. the upstream plane-ce Helm chart (workloads + bundled datastores)
-#   2. apps/plane/ in this repo (namespace, quota, Authelia ingress, and the
-#      SealedSecrets that replace every one of the chart's public defaults)
+#   2. apps/plane/ in this repo (namespace, quota, ingress, and the
+#      ExternalSecret that generates every credential in-cluster, replacing
+#      the chart's public defaults)
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -35,14 +36,16 @@ spec:
             requireExplicitSecrets: true
             docstore_bucket: uploads
 
-          # Every credential comes from apps/plane/sealed-secrets.yaml.
+          # Every credential is generated in-cluster into ONE Secret,
+          # plane-secrets (apps/plane/generated-secrets.yaml), so all six
+          # hooks point at it and the passwords can't drift apart.
           external_secrets:
-            app_keys_existingSecret: plane-app-keys
-            pgdb_existingSecret: plane-pgdb
-            rabbitmq_existingSecret: plane-rabbitmq
-            doc_store_existingSecret: plane-doc-store
-            app_env_existingSecret: plane-app-env
-            live_env_existingSecret: plane-live-env
+            app_keys_existingSecret: plane-secrets
+            pgdb_existingSecret: plane-secrets
+            rabbitmq_existingSecret: plane-secrets
+            doc_store_existingSecret: plane-secrets
+            app_env_existingSecret: plane-secrets
+            live_env_existingSecret: plane-secrets
 
           postgres:
             storageClass: local-path
@@ -85,3 +88,6 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - RespectIgnoreDifferences=true
+      # The ExternalSecret/Password CRDs come from the external-secrets app;
+      # on a fresh cluster this app may sync first.
+      - SkipDryRunOnMissingResource=true

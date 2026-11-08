@@ -22,7 +22,8 @@ decrypts it), so ArgoCD itself is untouched.
 - [x] **Phase 2**: sops-secrets-operator. Done 2026-11-08: chart 0.29.1 running,
   age key bootstrapped, smoke-test SopsSecret decrypted and was owned/GC'd
   correctly
-- [ ] **Phase 3**: External Secrets Operator
+- [x] **Phase 3**: External Secrets Operator. Done 2026-11-08: chart 2.14.0 Healthy;
+  smoke test confirmed Password generator, templating and `CreatedOnce`
 - [ ] **Phase 4**: Plane on generated secrets
 - [ ] **Phase 5**: migrate existing SealedSecrets to SOPS
 - [ ] **Phase 6**: decommission Sealed Secrets
@@ -80,12 +81,21 @@ decrypts it), so ArgoCD itself is untouched.
 Only possible because Plane holds no data yet. **Don't start the Plane
 first-time setup before this phase is done.**
 
-1. Replace the 6 SealedSecrets with **one** `ExternalSecret` that uses
-   `Password` generators and templates `DATABASE_URL` / `AMQP_URL` from the
-   generated values. All six chart `external_secrets.*` names point at that
-   single Secret, so the passwords can't drift apart.
-2. `refreshPolicy: CreatedOnce`, so ESO **never** regenerates a password
-   Postgres is already using.
+1. Replace the 6 SealedSecrets with **one** `ExternalSecret`
+   (`apps/plane/generated-secrets.yaml`): a single `Password` generator fills
+   five keys via `secretKeys`, and the template builds `DATABASE_URL` /
+   `AMQP_URL` from them. All six chart `external_secrets.*` names point at
+   that one Secret, `plane-secrets`, so the passwords can't drift apart.
+2. Three settings together keep ESO from **ever** regenerating a password
+   that Postgres/RabbitMQ/MinIO already use (each tested on the cluster):
+   - `refreshPolicy: CreatedOnce`: normal and forced syncs don't regenerate.
+   - `creationPolicy: Orphan`: deleting the ExternalSecret keeps the Secret.
+   - `immutable: true`: needed because a **re-created** ExternalSecret with
+     only the two settings above *does* regenerate and overwrite the
+     orphaned Secret (observed in testing). With `immutable`, the API server
+     refuses the overwrite and the original passwords survive.
+   Use the same three settings for any future generated credential that a
+   datastore persists.
 3. Wipe Plane's 4 PVCs once (Postgres keeps whatever password it started
    with), then resync.
 4. Delete `apps/plane/sealed-secrets.yaml`.
