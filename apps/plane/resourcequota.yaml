@@ -2,7 +2,9 @@
 # admin, live) each set 50m/50Mi requests and 500m/1000Mi limits. The 4
 # bundled datastores (postgres, redis, rabbitmq, minio) and the 2 Jobs
 # (migrator, minio-bucket) set none, so they get the LimitRange defaults
-# below. Headroom covers one RollingUpdate surge pod at a time.
+# below. The worker's limit is raised to 3Gi (apps/argocd-apps/plane.yaml:
+# Celery forks one process per node CPU). Headroom covers one RollingUpdate
+# surge pod at a time, including a surging 3Gi worker.
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -13,7 +15,7 @@ spec:
     requests.cpu: "2"
     requests.memory: 4Gi
     limits.cpu: "10"
-    limits.memory: 16Gi
+    limits.memory: 20Gi
     pods: "20"
     persistentvolumeclaims: "6"
 ---
