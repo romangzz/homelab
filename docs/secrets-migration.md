@@ -52,10 +52,11 @@ decrypts it), so ArgoCD itself is untouched.
 ## Phase 2: sops-secrets-operator
 
 1. ArgoCD Application for the operator's Helm chart.
-2. **One manual bootstrap step**: put the age private key into the cluster
-   once (`kubectl create secret generic ... --from-file=keys.txt` in the
-   operator's namespace). Documented in the README prerequisites alongside
-   the Sealed Secrets key.
+2. **One manual bootstrap step**: the age private key goes into the cluster
+   once as Secret `sops-age-key` (key `keys.txt`) in namespace
+   `sops-secrets-operator`, streamed from 1Password over SSH so it never
+   touches disk (exact command in the README prerequisites). The operator
+   mounts it at `/etc/sops-age` and reads it via `SOPS_AGE_KEY_FILE`.
 3. Smoke test: a dummy `SopsSecret` → Secret appears → delete it.
 
 ## Phase 3: External Secrets Operator
@@ -93,12 +94,18 @@ first:
 | 3 | `cloudflare-api-token` (cert-manager) | High: TLS renewals |
 | 4 | `authelia-secrets`, `authelia-users` (auth) | High: login for protected apps. `STORAGE_ENCRYPTION_KEY` **must** stay identical or Authelia won't start |
 
-**Cutover per secret**: in one commit, the SealedSecret goes out and the
-SopsSecret comes in. The SealedSecret controller garbage-collects its Secret
-and sops-secrets-operator recreates it from SOPS. Running pods are
-unaffected; a pod that restarts during those seconds waits briefly in
-`CreateContainerConfigError`. After each commit, verify the Secret's owner
-and the app's health before the next one.
+**Cutover per secret (no gap)**: the SopsSecret is added with
+`spec.enforceOwnership: true`, so sops-secrets-operator rewrites the existing
+Secret's owner reference to itself instead of refusing a Secret it didn't
+create. The Sealed Secrets controller then sees a Secret it no longer owns and
+leaves it alone, so the old SealedSecret can be removed without Kubernetes
+garbage-collecting the Secret. The Secret never disappears, so even pods that
+restart mid-cutover are unaffected. Two commits per secret:
+
+1. Add the `*.sops.yaml` (same name/namespace, `enforceOwnership: true`).
+   Verify: the Secret's `ownerReferences` points at the SopsSecret, values
+   unchanged.
+2. Remove the SealedSecret. Verify: the Secret still exists, app healthy.
 
 ## Phase 6: Decommission
 
