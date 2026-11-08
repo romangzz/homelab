@@ -57,6 +57,11 @@ Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/h
       && sudo k3s kubectl -n sops-secrets-operator create secret generic sops-age-key --from-file=keys.txt=/dev/stdin'
   ```
   This needs passwordless `sudo` on the server (stdin carries the key, so `sudo` can't prompt). Otherwise `ssh` in interactively, run the same two `kubectl` commands, and paste the key (`op document get homelab-sops-age-key --vault Homelab` locally) into the second one, ending with Ctrl-D.
+- The **containerd AppArmor profile override** at `/etc/apparmor.d/cri-containerd.apparmor.d` (copy of [`docs/host/cri-containerd.apparmor.d`](docs/host/cri-containerd.apparmor.d)). Without it, signals between processes inside a container are denied on this host (Ubuntu 26.04, AppArmor 5): `gosu`-based images hang and Postgres can't manage its own processes. Install it before k3s starts its first container:
+  ```
+  sudo install -m 0644 docs/host/cri-containerd.apparmor.d /etc/apparmor.d/cri-containerd.apparmor.d
+  sudo apparmor_parser -r /etc/apparmor.d/cri-containerd.apparmor.d
+  ```
 - `kubeseal` locally, and its public cert cached, to seal any new secret:
   ```
   kubeseal --format yaml --cert <cached-cert.pem> < plaintext-secret.yaml > sealed-secret.yaml

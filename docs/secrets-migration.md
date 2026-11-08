@@ -24,7 +24,10 @@ decrypts it), so ArgoCD itself is untouched.
   correctly
 - [x] **Phase 3**: External Secrets Operator. Done 2026-11-08: chart 2.14.0 Healthy;
   smoke test confirmed Password generator, templating and `CreatedOnce`
-- [ ] **Phase 4**: Plane on generated secrets
+- [x] **Phase 4**: Plane on generated secrets. Done 2026-11-08: `plane-secrets`
+  generated (immutable), SealedSecrets pruned, PVCs wiped, Plane Healthy.
+  Blocked for a while by a node AppArmor bug unrelated to secrets (see
+  "Phase 4 incident" below)
 - [ ] **Phase 5**: migrate existing SealedSecrets to SOPS
 - [ ] **Phase 6**: decommission Sealed Secrets
 
@@ -99,6 +102,23 @@ first-time setup before this phase is done.**
 3. Wipe Plane's 4 PVCs once (Postgres keeps whatever password it started
    with), then resync.
 4. Delete `apps/plane/sealed-secrets.yaml`.
+
+### Phase 4 incident: AppArmor blocked signals inside containers
+
+Plane's Postgres showed `Running` but never started. The cause was on the node:
+containers carry stacked AppArmor labels (`cri-containerd.apparmor.d//&unconfined`,
+`chromium//&cri-containerd.apparmor.d`) that containerd's profile peer rules
+don't match, so **signals and ptrace reads between processes of the same
+container were denied**: `gosu` spun forever, `pg_ctl` got `Permission denied`,
+and Go lost SIGURG preemption. It wasn't a kernel-version bug (booting -42
+didn't help). Fixed with a local profile override,
+[`docs/host/cri-containerd.apparmor.d`](host/cri-containerd.apparmor.d)
+(see the README prerequisites). Lessons for later phases:
+
+- Scaling Plane's chart StatefulSets to 0 sticks: the chart omits `replicas`,
+  so ArgoCD doesn't restore it. Scale back by hand.
+- ArgoCD can keep serving a cached Helm render after a values change in
+  `apps/argocd-apps/plane.yaml`; a hard refresh applies it.
 
 ## Phase 5: Migrate existing secrets to SOPS (same values)
 
