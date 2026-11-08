@@ -1,0 +1,20 @@
+# SOPS creation rules (see docs/secrets-migration.md).
+#
+# Any file named *.sops.yaml under apps/ is encrypted to the homelab age key.
+# Only values under `data:`/`stringData:` are encrypted, so resource kinds,
+# names and secret key names stay readable in diffs and reviews.
+#
+# The private key lives at ~/.config/sops/age/keys.txt (sops' default path),
+# backed up in 1Password (vault "Homelab", item "homelab-sops-age-key"), and
+# in-cluster for sops-secrets-operator. Never in this repo.
+#
+# Usage:  sops apps/<app>/<name>.sops.yaml   (opens decrypted, re-encrypts on save)
+creation_rules:
+  - path_regex: ^apps/.*\.sops\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: age1uw5cvgnadjsexe33cqdpz8ka59at6nvxg8pv696z5tqk6a7kpcpqlry79w
+
+# Match the repo's 2-space YAML style (sops defaults to 4).
+stores:
+  yaml:
+    indent: 2
