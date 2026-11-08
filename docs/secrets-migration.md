@@ -32,7 +32,9 @@ decrypts it), so ArgoCD itself is untouched.
   - [x] Batch 1 (2026-11-08): `open-webui-secret`, `unpackerr-secret`,
     `recyclarr-config`. Taken over in place (same objects, same data
     digests), SealedSecrets pruned, apps Healthy throughout
-  - [ ] Batch 2: `vpn-secret`, `tailscale-auth`, `cloudflare-tunnel-token`
+  - [x] Batch 2 (2026-11-08): `vpn-secret`, `tailscale-auth`,
+    `cloudflare-tunnel-token`. Taken over in place; VPN, Tailscale and the
+    Cloudflare tunnel never restarted
   - [ ] Batch 3: `cloudflare-api-token` (cert-manager)
   - [ ] Batch 4: `authelia-secrets`, `authelia-users`
 - [ ] **Phase 6**: decommission Sealed Secrets
@@ -137,7 +139,7 @@ first:
 |---|---|---|
 | 1 | `open-webui-secret` (ai), `unpackerr-secret`, `recyclarr-config` (media) | Low |
 | 2 | `vpn-secret` (media), `tailscale-auth` (tailscale), `cloudflare-tunnel-token` (n8n) | Medium: networking/VPN |
-| 3 | `cloudflare-api-token` (cert-manager) | High: TLS renewals |
+| 3 | `cloudflare-api-token` (cert-manager) | High: TLS renewals. Verify with a throwaway Let's Encrypt **staging** issuer + Certificate using the same DNS-01 solver, before and after (renewal itself is weeks away) |
 | 4 | `authelia-secrets`, `authelia-users` (auth) | High: login for protected apps. `STORAGE_ENCRYPTION_KEY` **must** stay identical or Authelia won't start |
 
 **Cutover per secret (no gap)**: the SopsSecret is added with

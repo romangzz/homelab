@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - cloudflare-api-token.yaml
+  - cloudflare-api-token.sops.yaml
   - clusterissuer.yaml
   - certificate.yaml
   - traefik-tlsstore.yaml
