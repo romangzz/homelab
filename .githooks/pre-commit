@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Blocks commits that would put a secret in git unencrypted. Same check CI
+# runs (.github/scripts/check-sops-encrypted.sh), limited to staged YAML.
+# Enable once per clone:  git config core.hooksPath .githooks
+set -euo pipefail
+repo=$(git rev-parse --show-toplevel)
+cd "$repo"
+
+mapfile -t staged < <(git diff --cached --name-only --diff-filter=ACMR -- 'apps/*' 'clusters/*' | grep -E '\.ya?ml$' || true)
+[ ${#staged[@]} -eq 0 ] && exit 0
+
+# Check the staged content, not the working tree: a file can be encrypted on
+# disk but staged in plaintext (or vice versa) mid-edit.
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+for f in "${staged[@]}"; do
+  mkdir -p "$tmp/$(dirname "$f")"
+  git show ":$f" > "$tmp/$f"
+done
+
+cd "$tmp"
+exec bash "$repo/.github/scripts/check-sops-encrypted.sh" "${staged[@]}"

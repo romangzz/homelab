@@ -60,6 +60,18 @@ jobs:
           done
           exit $overall
 
+  # Structural guard that complements gitleaks: gitleaks finds secret-shaped
+  # strings, this finds secrets that aren't encrypted where they must be
+  # (a *.sops.yaml saved without sops, a plain Secret with data). Needs no
+  # downloads, so it still gates when GitHub release fetches are failing.
+  sops-encrypted:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secrets are encrypted
+        run: bash .github/scripts/check-sops-encrypted.sh
+
   gitleaks:
     runs-on: ubuntu-latest
     steps:
