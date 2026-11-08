@@ -1,18 +1,4 @@
 ---
-apiVersion: bitnami.com/v1alpha1
-kind: SealedSecret
-metadata:
-  name: cloudflare-tunnel-token
-  namespace: n8n
-spec:
-  encryptedData:
-    tunnel-token: AgBI3YnU0KG8lKayFavAdP3EV7kAs+EhNdvyIrUEB/jzY0G5d9oKtPu5y7zzPSlBbkS9kbOxmq+iKWTBL8iakXNshT3fNUnYpIZyw5Y3iSV907/opWUr32LZsx5u2YqpMWW/EIyj3+NWS7el0bgNsXoE3CEBk3AsOxm8+xLH15OGOxBpxQMgrKTgBMbyXVyvlmfOW+PNYw3H/YWyntVgtyfCxIOF+KREEdlcyMGtWKuA7b7pGRhM/HFViB66HUYYpCs+0OTWlBe7Pmvk9NPX0nVCe0GrT9dVxf8JQyBmpp889k2ZGVU3soa9Do6XxmS4VFHdp+6fSnwGwgTbaFlzDuHbH4ONIborgfA9MIpK6xHjp1+qL2w32SjXcJPFmtGZSI06/oYcYUOAONTSjalyeBp7SdJoRWucNyBVUoxk+H0aT7c1szsWM3zxwYcIDJLHNybH4ppQvPkcAQQWfhpuGIFMS8N/Tkm7WZ6fEzA+dDmak5JjyRkjtnwtgkhuyvBINe1rwOWfAOmcpgxNlI6oAI/IX1dBmFtV7YODQ0jFtgd+Nf8bCZ8rSYvp/w9NfRsWFTXb58pGCTSPPv1qaw/flQEfgdvhn24x0FkMMhU0JWTpQRyPNY6DdGojwoQxAIthjTGzErm42AZXNotrVBPTii/8j4RloBeSU42xldJ5Od8snAJap3F1pgvYi9GGsALLtEjX46ga0DBfFVJlutWkT2be6xGtHD8edXWsiTYzZ8eD5UOp7YIcIUESmoykY50xSi7JoO6E8oje+tiNoLvSzGnhPyJ2rbYgea2zigv3yf1JF98yaiQcQUaldAOq170fcrmPkGKyc2Wkfyu7zUeAGBNyM5X+LR6j8Xc4n0eE1HaRCYwcur/oZmS7EkS3Jn214o4FuENxUs2QJsVFDbe418S7COiXi2LMraf7Fxggb6VyolsYyHuj7Uwt
-  template:
-    metadata:
-      name: cloudflare-tunnel-token
-      namespace: n8n
-    type: Opaque
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
