@@ -22,9 +22,11 @@ resources:
   - whisper.yaml
   - subgen.yaml
   - unpackerr-secret.yaml
+  - unpackerr-secret.sops.yaml
   - unpackerr.yaml
   - iso-extractor.yaml
   - recyclarr-secret.yaml
+  - recyclarr-config.sops.yaml
   - recyclarr-cronjob.yaml
   - cleanuparr.yaml
   - ntfy.yaml
