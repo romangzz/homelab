@@ -39,7 +39,7 @@ jobs:
       # apps/monitoring/dashboard-server.yaml (a stray field at the
       # ConfigMap root, invisible to a plain YAML parse, but rejected by
       # -strict since it's not part of the ConfigMap schema). CRDs without
-      # a bundled schema (SealedSecret, Middleware, IngressRoute,
+      # a bundled schema (SopsSecret, ExternalSecret, Middleware, IngressRoute,
       # ClusterIssuer, Certificate, TLSStore, argoproj.io/Application) are
       # skipped rather than failed -- there's no public schema to check
       # them against, but the surrounding built-in resources still get

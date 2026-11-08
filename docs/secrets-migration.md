@@ -28,7 +28,9 @@ decrypts it), so ArgoCD itself is untouched.
   generated (immutable), SealedSecrets pruned, PVCs wiped, Plane Healthy.
   Blocked for a while by a node AppArmor bug unrelated to secrets (see
   "Phase 4 incident" below)
-- [ ] **Phase 5**: migrate existing SealedSecrets to SOPS
+- [x] **Phase 5**: migrate existing SealedSecrets to SOPS. Done 2026-11-08: all 9
+  Secrets taken over in place (same objects, same data digests), no unplanned
+  restarts
   - [x] Batch 1 (2026-11-08): `open-webui-secret`, `unpackerr-secret`,
     `recyclarr-config`. Taken over in place (same objects, same data
     digests), SealedSecrets pruned, apps Healthy throughout
@@ -37,8 +39,12 @@ decrypts it), so ArgoCD itself is untouched.
     Cloudflare tunnel never restarted
   - [x] Batch 3 (2026-11-08): `cloudflare-api-token`. Taken over in place;
     staging DNS-01 test issued in ~100s before, after step A and after step B
-  - [ ] Batch 4: `authelia-secrets`, `authelia-users`
-- [ ] **Phase 6**: decommission Sealed Secrets
+  - [x] Batch 4 (2026-11-08): `authelia-secrets`, `authelia-users`. Taken over
+    in place; one deliberate restart started cleanly (storage key validated)
+- [x] **Phase 6**: decommission Sealed Secrets. Done 2026-11-08: controller and CRD
+  removed via ArgoCD (cascade finalizer); all 3 sealing keys backed up in
+  1Password (vault *Homelab*, `homelab-sealed-secrets-master-keys`) for old
+  git history
 
 ## Phase 1: Tooling (no cluster changes)
 

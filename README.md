@@ -8,7 +8,8 @@ A single-node k3s homelab, deployed entirely through ArgoCD from this repo. Medi
 flowchart LR
     DEV[git push] --> REPO[This repo]
     REPO --> ARGO[ArgoCD]
-    ARGO -->|decrypts via| SS[Sealed Secrets controller]
+    ARGO --> SOPS[sops-secrets-operator<br/>decrypts *.sops.yaml with age]
+    ARGO --> ESO[External Secrets Operator<br/>generates in-cluster credentials]
     ARGO --> K8S[k3s cluster]
 
     U[Browser / Tailnet device] -->|"*.home.romangzz.com"| TR[Traefik]
@@ -17,7 +18,7 @@ flowchart LR
     CM[cert-manager] -->|DNS-01 via Cloudflare| TR
 ```
 
-Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/homelab` → `apps/argocd-apps` → one `Application` per app). Secrets are never plaintext in git — they're `SealedSecret` resources, encrypted client-side with `kubeseal` against the in-cluster controller's public cert, and only that controller can decrypt them. TLS is a single wildcard cert from Let's Encrypt (DNS-01 via Cloudflare), registered as Traefik's default certificate, so every app gets real HTTPS with no per-app cert config. Apps with no login of their own sit behind Authelia via a Traefik `forwardAuth` middleware, enforced at the proxy. Apps that ship their own login (ArgoCD, Plane, qBittorrent, Omada) are exposed directly and rely on it, so there's no double login.
+Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/homelab` → `apps/argocd-apps` → one `Application` per app). Secrets are never plaintext in git. Values that come from outside (tokens, API keys, passwords) are `SopsSecret` resources in `*.sops.yaml` files, encrypted client-side with [sops](https://github.com/getsops/sops) + age (only the values; key names stay readable) and decrypted in-cluster by sops-secrets-operator. Internal random credentials (e.g. Plane's database passwords) are generated in-cluster by External Secrets Operator and never exist in git at all. See [docs/secrets-migration.md](docs/secrets-migration.md). TLS is a single wildcard cert from Let's Encrypt (DNS-01 via Cloudflare), registered as Traefik's default certificate, so every app gets real HTTPS with no per-app cert config. Apps with no login of their own sit behind Authelia via a Traefik `forwardAuth` middleware, enforced at the proxy. Apps that ship their own login (ArgoCD, Plane, qBittorrent, Omada) are exposed directly and rely on it, so there's no double login.
 
 ## Apps
 
@@ -44,13 +45,12 @@ Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/h
 | n8n | `n8n` | `n8n.home.romangzz.com` (internal), `n8n.romangzz.com` (public, via Cloudflare Tunnel) | Workflow automation |
 | Authelia | `auth` | `auth.home.romangzz.com` | SSO login portal |
 | Homepage | `dashboard` | `home.romangzz.com` | Single entry point linking everything above |
-| cert-manager, Sealed Secrets, sops-secrets-operator, External Secrets Operator, nvidia-device-plugin | `cert-manager`, `kube-system`, `sops-secrets-operator`, `external-secrets` | — | Cluster infrastructure, no UI |
+| cert-manager, sops-secrets-operator, External Secrets Operator, nvidia-device-plugin | `cert-manager`, `kube-system`, `sops-secrets-operator`, `external-secrets` | — | Cluster infrastructure, no UI |
 
 ## Prerequisites
 
 - A k3s cluster with ArgoCD installed and bootstrapped to sync from this repo (`clusters/homelab`).
-- The Sealed Secrets controller running in-cluster *before* anything else — its private key is the one thing that can never live in this repo. Back it up somewhere offline the moment it's generated.
-- The **sops age key** loaded into the cluster once, so sops-secrets-operator can decrypt `*.sops.yaml` (see [docs/secrets-migration.md](docs/secrets-migration.md)). The key lives in 1Password (vault *Homelab*, item `homelab-sops-age-key`), never in this repo:
+- The **sops age key** loaded into the cluster once, so sops-secrets-operator can decrypt `*.sops.yaml` (see [docs/secrets-migration.md](docs/secrets-migration.md)). It is the one secret that can never live in this repo: it's in 1Password (vault *Homelab*, item `homelab-sops-age-key`), and locally at `~/.config/sops/age/keys.txt` for editing:
   ```
   op document get homelab-sops-age-key --vault Homelab \
     | ssh <server> '{ sudo k3s kubectl create namespace sops-secrets-operator </dev/null || true; } \
@@ -62,16 +62,17 @@ Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/h
   sudo install -m 0644 docs/host/cri-containerd.apparmor.d /etc/apparmor.d/cri-containerd.apparmor.d
   sudo apparmor_parser -r /etc/apparmor.d/cri-containerd.apparmor.d
   ```
-- `kubeseal` locally, and its public cert cached, to seal any new secret:
+- `sops` and `age` locally, to create or edit a secret. `.sops.yaml` has the creation rules, so any `apps/**/*.sops.yaml` encrypts automatically:
   ```
-  kubeseal --format yaml --cert <cached-cert.pem> < plaintext-secret.yaml > sealed-secret.yaml
+  sops apps/<app>/<name>.sops.yaml   # opens decrypted, re-encrypts on save
   ```
+  Enable the plaintext guard once per clone: `git config core.hooksPath .githooks`.
 - A Cloudflare account with the DNS zone for your domain, for cert-manager's DNS-01 challenge and (separately) the n8n tunnel.
 - Internal DNS (this repo assumes Omada LAN DNS + Tailscale Split DNS) resolving `*.home.<yourdomain>` to the cluster node.
 
 ## CI
 
-Every push and PR runs [`.github/workflows/validate.yml`](.github/workflows/validate.yml): every `kustomization.yaml` in the repo is built and schema-validated in strict mode, and the tree is scanned for accidentally-committed plaintext secrets (see [`.gitleaks.toml`](.gitleaks.toml) for why `SealedSecret` ciphertext doesn't trigger false positives). [Renovate](renovate.json) opens PRs for outdated image tags and Helm chart versions.
+Every push and PR runs [`.github/workflows/validate.yml`](.github/workflows/validate.yml): every `kustomization.yaml` in the repo is built and schema-validated in strict mode, the tree is scanned for accidentally-committed plaintext secrets with gitleaks, and [`check-sops-encrypted.sh`](.github/scripts/check-sops-encrypted.sh) fails on any `*.sops.yaml` that isn't actually encrypted or any plain `Secret` with data. [Renovate](renovate.json) opens PRs for outdated image tags and Helm chart versions.
 
 ## License
 

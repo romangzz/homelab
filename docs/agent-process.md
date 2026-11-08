@@ -41,7 +41,7 @@ permission prompts. The pod is not privileged, has no hostPath and
 `automountServiceAccountToken: false`. A NetworkPolicy limits egress to Ollama,
 Plane, GitHub and package registries. Its GitHub token is fine-grained and
 scoped to the one project repo. Its Plane token is scoped to the one project.
-Both are `SealedSecret`s.
+Both are `SopsSecret`s (`*.sops.yaml`, see docs/secrets-migration.md).
 
 ## Phases
 
