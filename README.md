@@ -44,7 +44,7 @@ Everything in the cluster is declared here and reconciled by ArgoCD (`clusters/h
 | n8n | `n8n` | `n8n.home.romangzz.com` (internal), `n8n.romangzz.com` (public, via Cloudflare Tunnel) | Workflow automation |
 | Authelia | `auth` | `auth.home.romangzz.com` | SSO login portal |
 | Homepage | `dashboard` | `home.romangzz.com` | Single entry point linking everything above |
-| cert-manager, Sealed Secrets, sops-secrets-operator, nvidia-device-plugin | `cert-manager`, `kube-system`, `sops-secrets-operator` | — | Cluster infrastructure, no UI |
+| cert-manager, Sealed Secrets, sops-secrets-operator, External Secrets Operator, nvidia-device-plugin | `cert-manager`, `kube-system`, `sops-secrets-operator`, `external-secrets` | — | Cluster infrastructure, no UI |
 
 ## Prerequisites
 

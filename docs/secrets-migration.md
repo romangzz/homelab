@@ -19,7 +19,9 @@ decrypts it), so ArgoCD itself is untouched.
 - [x] **Phase 1**: tooling (laptop + repo). Done 2026-11-08: age key in 1Password
   (vault *Homelab*, item `homelab-sops-age-key`), public key in `.sops.yaml`,
   plaintext guard in CI + pre-commit
-- [ ] **Phase 2**: sops-secrets-operator
+- [x] **Phase 2**: sops-secrets-operator. Done 2026-11-08: chart 0.29.1 running,
+  age key bootstrapped, smoke-test SopsSecret decrypted and was owned/GC'd
+  correctly
 - [ ] **Phase 3**: External Secrets Operator
 - [ ] **Phase 4**: Plane on generated secrets
 - [ ] **Phase 5**: migrate existing SealedSecrets to SOPS
@@ -61,7 +63,15 @@ decrypts it), so ArgoCD itself is untouched.
 
 ## Phase 3: External Secrets Operator
 
-1. ArgoCD Application for the ESO Helm chart (with CRDs).
+1. ArgoCD Application for the ESO Helm chart 2.14.0 (with CRDs). Used only
+   for its in-cluster generators; no external SecretStore backend.
+   - `ServerSideApply=true`: the SecretStore CRDs are ~720KB, over
+     client-side apply's 256KB annotation limit.
+   - `ignoreDifferences` for what the cert-controller writes at runtime (the
+     webhook Secret's `data` and the webhook configs' `caBundle`).
+   - Its chart is served from GitHub release assets, so a GitHub outage at
+     sync time shows up as a `ComparisonError` (as happened with Plane);
+     a hard refresh once GitHub recovers fixes it.
 2. `SkipDryRunOnMissingResource=true` on apps that use ESO resources, so the
    first sync doesn't fail before the CRDs exist.
 
