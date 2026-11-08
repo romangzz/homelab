@@ -2,9 +2,10 @@
 # and pruned automatically. SUSPENDED by default -- restic needs a
 # repository target (S3, Backblaze B2, SFTP, rest-server, ...) and a
 # password, neither of which exist yet. To enable:
-#   1. Pick a restic backend and create a SealedSecret named
-#      `restic-backup-secret` in the `media` namespace (same pattern as
-#      vpn-secret.yaml / unpackerr-secret.yaml) with at minimum:
+#   1. Pick a restic backend and create a SopsSecret named
+#      `restic-backup-secret` in the `media` namespace, in a
+#      `*.sops.yaml` file (same pattern as unpackerr-secret.sops.yaml;
+#      see docs/secrets-migration.md) with at minimum:
 #        RESTIC_REPOSITORY   e.g. s3:https://s3.<region>.backblazeb2.com/<bucket>
 #        RESTIC_PASSWORD     encryption password for the restic repo
 #      plus whatever the backend needs, e.g. for S3/B2:

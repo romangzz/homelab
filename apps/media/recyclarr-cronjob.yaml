@@ -1,7 +1,8 @@
 # Keeps Radarr/Sonarr custom formats and quality profiles in sync with
 # TRaSH Guides. Config references guide-backed quality profiles by
 # trash_id (not hand-typed custom format definitions) -- see
-# recyclarr-secret.yaml for which profiles.
+# recyclarr-config.sops.yaml (`sops apps/media/recyclarr-config.sops.yaml`)
+# for which profiles.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
